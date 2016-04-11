@@ -1,0 +1,14 @@
+{
+  "dev": {
+    "driver": "mysql",
+    "user": "root",
+    "database": "forum_db",
+    "password": "vita"
+  },
+ 
+  "production": {
+    "driver": "mysql",
+    "user": "root",
+    "database": "forum_db"
+  }
+}
