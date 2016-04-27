@@ -25,31 +25,21 @@ router.post('/create/',function(req, res, next) {
 		req.body.isDeleted = false;
 	}	
 	result.response = req.body;
-	mod_func.get_user(req.body.user, function (user_data, httpreq) {
-		if (httpreq === 400) {
-			res.status(httpreq).json(user_data);
-		} else {
-			mod_func.get_forum(req.body.forum, function(forum_data, httpreq) {	
-				if (httpreq === 400) {
-					res.status(httpreq).json(forum_data);
-				} else {
-					connect.query("INSERT INTO Posts (date, thread_id, message, user_id, forum_id, parent, isApproved, isHighlighted, isEdited, isSpam, isDeleted) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", 
-						[req.body.date, req.body.thread, req.body.message, user_data.id, forum_data.id, req.body.parent, req.body.isApproved, req.body.isHighlighted, req.body.isEdited, req.body.isSpam, req.body.isDeleted], 
-						function(err, data) {
-							if (err) {
-								err = mod_func.mysqlErr(err.errno);
-								result = err;
-								res.status(400).json(result);
-							} else {
-								result.response.id = data.insertId;
-								result.code = 0;
-								res.status(200).json(result);						
-							}
-						});	
-				}
-			});
-		}
-	});			
+	connect.query("INSERT INTO Posts (date, thread_id, message, user, forum, parent, isApproved, isHighlighted, isEdited, isSpam, isDeleted) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", 
+		[req.body.date, req.body.thread, req.body.message, req.body.user, req.body.forum, req.body.parent, req.body.isApproved, req.body.isHighlighted, req.body.isEdited, req.body.isSpam, req.body.isDeleted], 
+		function(err, data) {
+			if (err) {
+				console.log(err);
+				err = mod_func.mysqlErr(err.errno);
+				result = err;
+				res.status(400).json(result);
+			} else {
+				result.response.id = data.insertId;
+				result.code = 0;
+				res.status(200).json(result);						
+			}
+		});	
+	
 })
 
 
@@ -98,7 +88,7 @@ router.get('/list/',function(req, res, next) {
 			});		
 	} else {
 		if (req.query.forum !== undefined) {
-			connect.query("SELECT * FROM Posts p JOIN Forums f ON p.id=f.post_id WHERE f.short_name=?;", 
+			connect.query("SELECT * FROM Posts p JOIN Forums f ON p.forum=f.short_name WHERE f.short_name=?;", 
 				[req.query.forum], 
 				function(err, data) {
 					if (err) {
@@ -119,7 +109,7 @@ router.get('/list/',function(req, res, next) {
 router.post('/remove/',function(req, res, next) {
 	var result = {};
 	result.response = {};
-	connect.query("UPDATE Posts SET isDeleted = true WHERE id=?;", 
+	connect.query("UPDATE Posts SET isDeleted=true WHERE id=?;", 
 		[req.query.post], 
 		function(err, data) {
 			if (err) {
@@ -136,15 +126,71 @@ router.post('/remove/',function(req, res, next) {
 })
 
 router.post('/restore/',function(req, res, next) {
-	res.send('user.create')
+	var result = {};
+	result.response = {};
+	connect.query("UPDATE Posts SET isDeleted=false WHERE id=?;", 
+		[req.query.post], 
+		function(err, data) {
+			if (err) {
+				err = mod_func.mysqlErr(err.errno);
+				result = err;
+				res.status(400).json(result);
+			} else {
+				result.response = data;
+				result.code = 0;
+				res.status(200).json(result);
+			}
+	});		
 })
 
 router.post('/update/',function(req, res, next) {
-	res.send('user.create')
+	var result = {};
+	result.response = {};
+	connect.query("UPDATE Posts SET message=? WHERE id=?;", 
+		[req.body.message, req.body.post], 
+		function(err, data) {
+			if (err) {
+				err = mod_func.mysqlErr(err.errno);
+				result = err;
+				res.status(400).json(result);
+			} else {
+				mod_func.get_post(req.body.post, function(post_data, httpreq) {	
+					if (httpreq === 400) {
+						res.status(httpreq).json(post_data);
+					} else {
+						result.response = post_data;
+						result.code = 0;
+						res.status(200).json(result);
+					}
+				})
+			}
+	})
 })
 
 router.post('/vote/',function(req, res, next) {
-	res.send('user.create')
+	var result = {};
+	result.response = {};
+	console.log((req.body.vote > 0));
+	connect.query("UPDATE Posts SET likes=likes+?, dislikes=dislikes+? WHERE id =?;", 
+		[(req.body.vote > 0), (req.body.vote < 0), req.body.thread], 
+		function(err, data) {
+			if (err) {
+				console.log(err);
+				err = mod_func.mysqlErr(err.errno);
+				result = err;
+				res.status(400).json(result);
+			} else {
+				mod_func.get_post(req.body.post, function(post_data, httpreq) {	
+					if (httpreq === 400) {
+						res.status(httpreq).json(post_data);
+					} else {
+						result.response = post_data;
+						result.code = 0;
+						res.status(200).json(result);
+					}
+				})
+			}
+	});		
 })
 
 

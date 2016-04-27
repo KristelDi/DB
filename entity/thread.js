@@ -3,43 +3,26 @@ var router = express.Router();
 var connect = require('./../dbconnect');
 var mod_func = require('./../func');
 
-router.post('/close/',function(req, res, next) {
-	res.send('user.create')
-})
-
 router.post('/create/',function(req, res, next) {
 	var result = {};
 	result.response = req.body;
 	if (req.body.isDeleted != undefined) {
 		req.body.isDeleted = false;
 	}
-	mod_func.get_user(req.query.user, function(user_data, httpreq) {	
-		console.log("get user = ", httpreq);
-		if (httpreq === 400) {
-			res.status(httpreq).json(user_data);
+	connect.query("INSERT INTO Threads (forum, title, isClosed, user, date, message, slug, isDeleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?);", 
+		[req.body.forum, req.body.title, req.body.isClosed, req.body.user, req.body.date, req.body.message, req.body.slug, req.body.isDeleted], 
+	function(err, data) {
+		if (err) {
+			err = mod_func.mysqlErr(err.errno);
+			result = err;
+			res.status(400).json(result);
 		} else {
-			mod_func.get_forum(req.query.forum, function(forum_data, httpreq) {	
-				console.log("get forum = ", httpreq);
-				if (httpreq === 400) {
-					res.status(httpreq).json(forum_data);
-				} else {
-					connect.query("INSERT INTO Threads (forum_id, title, isClosed, user_id, date, message, slug, isDeleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?);", 
-						[forum_data.id, req.body.title, req.body.isClosed, user_data.id, req.body.date, req.body.message, req.body.slug, req.body.isDeleted], 
-					function(err, data) {
-						if (err) {
-							err = mod_func.mysqlErr(err.errno);
-							result = err;
-							res.status(400).json(result);
-						} else {
-							result.response.id = data.insertId;
-							result.code = 0;
-							res.status(200).json(result);
-						}
-					});		
-				}
-			});
+			result.response.id = data.insertId;
+			result.code = 0;
+			res.status(200).json(result);
 		}
-	});
+	});		
+
 })
 
 router.get('/details/',function(req, res, next) {
@@ -58,14 +41,15 @@ router.get('/details/',function(req, res, next) {
 router.get('/list/',function(req, res, next) {
 	var result = {};
 	if (req.query.user !== undefined) {
-		connect.query("SELECT * FROM Threads t JOIN Users u ON t.user_if=u.id WHERE u.email=?;", 
-			[req.body.user], 
+		connect.query("SELECT * FROM Threads WHERE user=?;", 
+			[req.query.user], 
 			function(err, data) {
 				if (err) {
 					err = mod_func.mysqlErr(err.errno);
 					result = err;
 					res.status(400).json(result);
 				} else {
+						console.log(data);
 						result.response = data;
 						result.code = 0;
 						res.status(200).json(result);
@@ -73,7 +57,7 @@ router.get('/list/',function(req, res, next) {
 			});		
 	} else {
 		if (req.query.forum !== undefined) {
-			connect.query("SELECT * FROM Threads t JOIN Forums f ON t.forum_id=f.id WHERE f.short_name=?;", 
+			connect.query("SELECT * FROM Threads WHERE forum=?;", 
 				[req.query.forum], 
 				function(err, data) {
 					if (err) {
@@ -81,6 +65,7 @@ router.get('/list/',function(req, res, next) {
 						result = err;
 						res.status(400).json(result);
 					} else {
+							console.log(data);
 							result.response = data;
 							result.code = 0;
 							res.status(200).json(result);
@@ -91,16 +76,35 @@ router.get('/list/',function(req, res, next) {
 })
 
 router.get('/listPosts/',function(req, res, next) {
-	result = {};
+	var result = {};
+	result.response = {};
+	var str_since = "";
+	var str_limit = ";";
+	if (req.query.since) {
+		str_since = " AND p.date > '" + req.query.since+"'";	
+	}
+	if (req.query.limit)
+		str_limit = "LIMIT " + req.query.limit + ";";
 
-	connect.query("SELECT * FROM Posts WHERE thread_id=?;", 
-		[req.query.thread], 
-		function(err, data) {
+	if (!req.query.sort)
+		req.query.sort = 'flat';
+	if (!req.query.order)
+		req.query.order = 'DESC';
+
+	if (req.query.sort === 'flat') {
+		sqlStr = "SELECT * FROM Posts p JOIN Forums f ON p.forum_id=f.id WHERE f.short_name='"+req.query.forum+"'"+ str_since + " ORDER BY " + " date " +req.query.order+ str_limit;
+	}
+	console.log('qstr = ' + sqlStr);
+	// sqlStr = "SELECT * FROM Posts p WHERE p.thread_id="+req.query.thread + str_since + " ORDER BY "+req.query.order + str_limit;
+
+	connect.query(sqlStr, function(err, data) {
 			if (err) {
+				console.log(err);
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
 				res.status(400).json(result);
 			} else {
+					console.log(data);
 					result.response = data;
 					result.code = 0;
 					res.status(200).json(result);
@@ -109,6 +113,24 @@ router.get('/listPosts/',function(req, res, next) {
 })
 
 router.post('/open/',function(req, res, next) {
+	result = {};
+	result.response = {};
+	connect.query("UPDATE Threads SET isClosed=false WHERE id=?;", 
+		[req.query.thread], 
+		function(err, data) {
+			if (err) {
+				err = mod_func.mysqlErr(err.errno);
+				result = err;
+				res.status(400).json(result);
+			} else {
+					result.response.thread = req.query.thread;
+					result.code = 0;
+					res.status(200).json(result);
+			}
+		});		
+})
+
+router.post('/close/',function(req, res, next) {
 	result = {};
 	result.response = {};
 	connect.query("UPDATE Threads SET isClosed=true WHERE id=?;", 
@@ -126,52 +148,142 @@ router.post('/open/',function(req, res, next) {
 		});		
 })
 
-
 router.post('/remove/',function(req, res, next) {
-	res.send('user.create')
+	var result = {};
+	result.response = {};
+	connect.query("UPDATE Threads SET isDeleted=true WHERE id=?;", 
+		[req.query.thread], 
+		function(err, data) {
+			if (err) {
+				err = mod_func.mysqlErr(err.errno);
+				result = err;
+				res.status(400).json(result);
+			} else {
+				result.response = data;
+				result.code = 0;
+				res.status(200).json(result);
+			}
+	});		
 })
 
 router.post('/restore/',function(req, res, next) {
-	res.send('user.create')
+	var result = {};
+	result.response = {};
+	connect.query("UPDATE Threads SET isDeleted=false WHERE id=?;", 
+		[req.query.thread], 
+		function(err, data) {
+			if (err) {
+				err = mod_func.mysqlErr(err.errno);
+				result = err;
+				res.status(400).json(result);
+			} else {
+				result.response = data;
+				result.code = 0;
+				res.status(200).json(result);
+			}
+	});		
 })
 
-router.get('/subscribe/',function(req, res, next) {
-	res.send('user.create')
+router.post('/subscribe/',function(req, res, next) {
+	var result = {};
+	result.response = req.body;
+	mod_func.get_user(req.body.user, function(user_data, httpreq) {	
+		if (httpreq === 400) {
+			res.status(httpreq).json(user_data);
+		} else {
+			connect.query("INSERT INTO Subscribers (user_id, thread_id) VALUES (?, ?);", 
+					[user_data.id, req.body.thread], 
+					function(err, data) {
+						if (err) {
+							err = mod_func.mysqlErr(err.errno);
+							result = err;
+							res.status(400).json(result);
+						} else {
+							//result.response = data;
+							result.code = 0;
+							res.status(200).json(result);
+						}
+				});		
+		}
+	})
 })
 
 
-router.get('/unsubscribe/',function(req, res, next) {
-	res.send('user.create')
-})
+router.post('/unsubscribe/',function(req, res, next) {
+	var result = {};
+	result.response = req.body;
+	mod_func.get_user(req.body.user, function(user_data, httpreq) {	
+		if (httpreq === 400) {
+			res.status(httpreq).json(user_data);
+		} else {
+			connect.query("DELETE FROM Subscribers WHERE user_id=? AND thread_id=?;", 
+					[user_data.id, req.body.thread], 
+					function(err, data) {
+						if (err) {
+							console.log(err);
+							err = mod_func.mysqlErr(err.errno);
+							result = err;
+							res.status(400).json(result);
+						} else {
+							//result.response = data;
+							result.code = 0;
+							res.status(200).json(result);
+						}
+				});		
+		}
+	})})
 
 
 router.post('/update/',function(req, res, next) {
-	result = {};
-	qStr = 'UPDATE Threads SET message='+req.body.message+', slug='+req.body.slug+' WHERE id='+req.body.thread+';';
-	mod_func.execute_sql(qStr, function(data){
-		mod_func.get_thread(req.body.thread, function(thread_data){
-			result.response = thread_data;
-			result.code = 0;
-			res.status(200).json(result);
-		});		
-	});
+	var result = {};
+	result.response = {};
+	console.log("UPDATE Threads SET message=?, slug=? WHERE id="+req.body.thread);
+	connect.query("UPDATE Threads SET message=?, slug=? WHERE id=?;", 
+		[req.body.message, req.body.slug, req.body.thread], 
+		function(err, data) {
+			if (err) {
+				err = mod_func.mysqlErr(err.errno);
+				result = err;
+				res.status(400).json(result);
+			} else {
+				mod_func.get_thread(req.body.thread, function(thread_data, httpreq) {	
+					if (httpreq === 400) {
+						res.status(httpreq).json(thread_data);
+					} else {
+						result.response = thread_data;
+						result.code = 0;
+						res.status(200).json(result);
+					}
+				})
+			}
+	});		
 })
 
+
 router.post('/vote/',function(req, res, next) {
-	result = {};
-	if (req.body.vote === 1) {
-		qStr = 'UPDATE Threads SET likes = likes + 1 WHERE id =' +req.body.thread+ ';';
-	}
-	if (req.body.vote === -1) {
-		qStr = 'UPDATE Threads SET dislikes = dislikes + 1 WHERE id =' +req.body.thread+ ';';
-	}
-	mod_func.execute_sql(qStr, function(data){
-		mod_func.get_thread(req.body.thread, function(thread_data){
-			result.response = thread_data;
-			result.code = 0;
-			res.status(200).json(result);
-		});
-	});
+	var result = {};
+	result.response = {};
+	console.log((req.body.vote > 0));
+	connect.query("UPDATE Threads SET likes=likes+?, dislikes=dislikes+? WHERE id =?;", 
+		[(req.body.vote > 0), (req.body.vote < 0), req.body.thread], 
+		function(err, data) {
+			if (err) {
+				console.log(err);
+				err = mod_func.mysqlErr(err.errno);
+				result = err;
+				res.status(400).json(result);
+			} else {
+				mod_func.get_thread(req.body.thread, function(thread_data, httpreq) {	
+					if (httpreq === 400) {
+						res.status(httpreq).json(thread_data);
+					} else {
+						result.response = thread_data;
+						result.code = 0;
+						res.status(200).json(result);
+					}
+				})
+			}
+	});		
 
 })
 

@@ -32,19 +32,30 @@ router.post('/create/', function(req, res) {
 router.get('/details/', function(req, res, next) {
 	var result = {};
 	result.response = {};
-	connect.query("SELECT * FROM Users WHERE email=?;", 
-		[req.query.user], 
-		function(err, data) {
-			if (err) {
-				err = mod_func.mysqlErr(err.errno);
-				result = err;
-				res.status(400).json(result);
-			} else {
-				result.response = data[0];
-				result.code = 0;
-				res.status(200).json(result);
-			}
-		});	
+	mod_func.get_user_full(req.query.user, function(user_data, httpreq) {
+		if (httpreq === 400) {
+			res.status(httpreq).json(user_data);
+		} else {
+			result.response = user_data;
+			result.code = 0;
+			res.status(200).json(result);
+		}
+	});
+
+
+	// connect.query("SELECT * FROM Users WHERE email=?;", 
+	// 	[req.query.user], 
+	// 	function(err, data) {
+	// 		if (err) {
+	// 			err = mod_func.mysqlErr(err.errno);
+	// 			result = err;
+	// 			res.status(400).json(result);
+	// 		} else {
+	// 			result.response = data[0];
+	// 			result.code = 0;
+	// 			res.status(200).json(result);
+	// 		}
+	// 	});	
 })
 
 router.post('/follow/',function(req, res, next) {
@@ -53,7 +64,7 @@ router.post('/follow/',function(req, res, next) {
 	var followee = 0;
 	var follower = 1;
 	console.log(req.body);
-	connect.query("SELECT * FROM Users WHERE email IN (?, ?);", 
+	connect.query("SELECT * FROM Users WHERE email=? OR email=?;", 
 		[req.body.follower, req.body.followee], 
 		function(err, data) {
 			if (err) {

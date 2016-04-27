@@ -1,34 +1,13 @@
-use forum_db;
-DROP TABLE IF EXISTS Forums;
-CREATE TABLE Forum (
-    id INT AUTO_INCREMENT  NOT NULL PRIMARY KEY,
-    name VARCHAR(40) UNIQUE KEY,
-    short_name VARCHAR(40) UNIQUE KEY,
-    user VARCHAR (40)
-) DEFAULT CHARSET=utf8;
-
+use forum;
+DROP TABLE IF EXISTS Followers;
+DROP TABLE IF EXISTS Subscribers;
 DROP TABLE IF EXISTS Posts;
-CREATE TABLE  Posts (
-	id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
-    user_id INT NOT NULL,
-    message TEXT NOT NULL,
-    forum_id INT NOT NULL,
-    thread_id INT NOT NULL,
-    parent INT NULL DEFAULT NULL,
-    date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    likes INT NOT NULL DEFAULT 0,
-    dislikes INT NOT NULL DEFAULT 0,
-    isApproved BOOLEAN NOT NULL DEFAULT 0,
-    isHighlighted BOOLEAN NOT NULL DEFAULT 0,
-    isEdited BOOLEAN NOT NULL DEFAULT 0,
-    isSpam BOOLEAN NOT NULL DEFAULT 0,
-    isDeleted BOOLEAN NOT NULL DEFAULT 0
-) DEFAULT CHARSET=utf8;
-
-
+DROP TABLE IF EXISTS Threads;
+DROP TABLE IF EXISTS Forums;
 DROP TABLE IF EXISTS Users;
+
 CREATE TABLE Users (
-	id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+    id INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY,
     email VARCHAR(50) NOT NULL,
     username VARCHAR(50),
     about TEXT,
@@ -37,56 +16,172 @@ CREATE TABLE Users (
     UNIQUE KEY(email)
 ) DEFAULT CHARSET=utf8;
 
+CREATE TABLE Forums (
+    id INT UNSIGNED AUTO_INCREMENT  NOT NULL PRIMARY KEY,
+    name VARCHAR(40) UNIQUE KEY,
+    short_name VARCHAR(40) UNIQUE KEY,
+    user VARCHAR(50) NOT NULL,
+    FOREIGN KEY (user) REFERENCES Users(email)
+    ON DELETE CASCADE 
+) DEFAULT CHARSET=utf8;
 
-DROP TABLE IF EXISTS Threads;
+
 CREATE TABLE Threads (
-	id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
-    forum_id INT NOT NULL,
-    user_id INT NOT NULL,
+    id INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY,
+    forum VARCHAR(40) UNIQUE KEY,
+    user VARCHAR(50) NOT NULL,
     title VARCHAR(50) NOT NULL,
     slug VARCHAR(50) NOT NULL,
     message TEXT NOT NULL,
-    date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    date TIME NOT NULL DEFAULT CURRENT_TIME,
     likes INT NOT NULL DEFAULT 0,
     dislikes INT NOT NULL DEFAULT 0,
     isClosed BOOLEAN NOT NULL DEFAULT 0,
-    isDeleted BOOLEAN NOT NULL DEFAULT 0
+    isDeleted BOOLEAN NOT NULL DEFAULT 0,   
+    FOREIGN KEY (user) REFERENCES Users(email)
+    ON DELETE CASCADE,
+    FOREIGN KEY (forum) REFERENCES Forums(short_name)
+    ON DELETE CASCADE
+) DEFAULT CHARSET=utf8;
+
+CREATE TABLE  Posts (
+    id INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY,
+    user VARCHAR(50) NOT NULL,
+    message TEXT NOT NULL,
+    forum VARCHAR(40),
+    thread_id INT UNSIGNED NOT NULL,
+    parent INT NULL DEFAULT NULL,
+    date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    likes INT NOT NULL DEFAULT 0,
+    dislikes INT NOT NULL DEFAULT 0,
+    isApproved BOOLEAN NOT NULL DEFAULT 0,
+    isHighlighted BOOLEAN NOT NULL DEFAULT 0,
+    isEdited BOOLEAN NOT NULL DEFAULT 0,
+    isSpam BOOLEAN NOT NULL DEFAULT 0,
+    isDeleted BOOLEAN NOT NULL DEFAULT 0,
+    FOREIGN KEY (user) REFERENCES Users(email)
+    ON DELETE CASCADE,
+    FOREIGN KEY (thread_id) REFERENCES Threads(id)
+    ON DELETE CASCADE,
+    FOREIGN KEY fo (forum) REFERENCES Forums(short_name)
+    ON DELETE CASCADE
 ) DEFAULT CHARSET=utf8;
 
 
-DROP TABLE IF EXISTS Followers;
 CREATE TABLE Followers (
-	follower_id INT NOT NULL,
-    followee_id INT NOT NULL,
-    UNIQUE (followee_id, follower_id)
+    follower_id INT UNSIGNED NOT NULL,
+    followee_id INT UNSIGNED  NOT NULL,
+    UNIQUE (followee_id, follower_id),
+    FOREIGN KEY (follower_id) REFERENCES Users(id),
+    FOREIGN KEY (followee_id) REFERENCES Users(id)
 ) DEFAULT CHARSET=utf8;
 
 
-DROP TABLE IF EXISTS Subscriptions;
-CREATE TABLE Subscriptions (
-	user_id INT NOT NULL,
-    thread_id INT NOT NULL
+CREATE TABLE Subscribers (
+    user VARCHAR(50) NOT NULL,
+    thread_id INT UNSIGNED  NOT NULL,
+    UNIQUE (user, thread_id),
+    FOREIGN KEY (user) REFERENCES Users(email),
+    FOREIGN KEY (thread_id) REFERENCES Threads(id)
 ) DEFAULT CHARSET=utf8;
 
 
-INSERT INTO Users (email, username, name) VALUES 
-	('1@mail.ru', 'login1', 'name1'), 
-	('2@mail.ru', 'login2', 'name2'), 
-	('3@mail.ru', 'login3', 'name3'), 
-	('4@mail.ru', 'login4', 'name4'),
-	('5@mail.ru', 'login5', 'name5');
 
 
 
-INSERT INTO Users (email, username, about) VALUES ('user1@mail.ru', 'user1', 'about'); 
-INSERT INTO Users (email, username, about) VALUES ('user2@mail.ru', 'user2', 'about'); 
-INSERT INTO Users (email, username, about) VALUES ('user3@mail.ru', 'user3', 'about'); 
-INSERT INTO Users (email, username, about) VALUES ('user4@mail.ru', 'user4', 'about'); 
-INSERT INTO Users (email, username, about) VALUES ('user5@mail.ru', 'user5', 'about'); 
+!!!!!!!!!!!!!!!!!!!!
+
+use forum;
+DROP TABLE IF EXISTS Followers;
+DROP TABLE IF EXISTS Subscribers;
+DROP TABLE IF EXISTS Posts;
+DROP TABLE IF EXISTS Threads;
+DROP TABLE IF EXISTS Forums;
+DROP TABLE IF EXISTS Users;
+
+CREATE TABLE Users (
+    id INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY,
+    email VARCHAR(50) NOT NULL,
+    username VARCHAR(50),
+    about TEXT,
+    name VARCHAR(50),
+    isAnonymous BOOLEAN NOT NULL DEFAULT 0,
+    UNIQUE KEY(email)
+) DEFAULT CHARSET=utf8;
+
+CREATE TABLE Forums (
+    id INT UNSIGNED AUTO_INCREMENT  NOT NULL PRIMARY KEY,
+    name VARCHAR(40) UNIQUE KEY,
+    short_name VARCHAR(40) UNIQUE KEY,
+    user VARCHAR(50) NOT NULL,
+    FOREIGN KEY (user) REFERENCES Users(email)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) DEFAULT CHARSET=utf8;
 
 
-INSERT INTO Users (email, username, about) VALUES ('user1@mail.ru', 'user1', 'about'); 
-INSERT INTO Users (email, username, about) VALUES ('user2@mail.ru', 'user2', 'about'); 
-INSERT INTO Users (email, username, about) VALUES ('user3@mail.ru', 'user3', 'about'); 
-INSERT INTO Users (email, username, about) VALUES ('user4@mail.ru', 'user4', 'about'); 
-INSERT INTO Users (email, username, about) VALUES ('user5@mail.ru', 'user5', 'about'); 
+CREATE TABLE Threads (
+    id INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY,
+    forum VARCHAR(40) UNIQUE KEY,
+    user VARCHAR(50) NOT NULL,
+    title VARCHAR(50) NOT NULL,
+    slug VARCHAR(50) NOT NULL,
+    message TEXT NOT NULL,
+    date TIMESTAMP NOT NULL,
+    likes INT NOT NULL DEFAULT 0,
+    dislikes INT NOT NULL DEFAULT 0,
+    isClosed BOOLEAN NOT NULL DEFAULT 0,
+    isDeleted BOOLEAN NOT NULL DEFAULT 0,   
+    FOREIGN KEY (user) REFERENCES Users(email)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (forum) REFERENCES Forums(short_name)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) DEFAULT CHARSET=utf8;
+
+CREATE TABLE  Posts (
+    id INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY,
+    user VARCHAR(50) NOT NULL,
+    message TEXT NOT NULL,
+    forum VARCHAR(40),
+    thread_id INT UNSIGNED NOT NULL,
+    parent INT NULL DEFAULT NULL,
+    date TIMESTAMP NOT NULL,
+    likes INT NOT NULL DEFAULT 0,
+    dislikes INT NOT NULL DEFAULT 0,
+    isApproved BOOLEAN NOT NULL DEFAULT 0,
+    isHighlighted BOOLEAN NOT NULL DEFAULT 0,
+    isEdited BOOLEAN NOT NULL DEFAULT 0,
+    isSpam BOOLEAN NOT NULL DEFAULT 0,
+    isDeleted BOOLEAN NOT NULL DEFAULT 0,
+    FOREIGN KEY (user) REFERENCES Users(email)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (thread_id) REFERENCES Threads(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY fo (forum) REFERENCES Forums(short_name)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) DEFAULT CHARSET=utf8;
+
+
+CREATE TABLE Followers (
+    follower_id INT UNSIGNED NOT NULL,
+    followee_id INT UNSIGNED  NOT NULL,
+    UNIQUE (followee_id, follower_id),
+    FOREIGN KEY (follower_id) REFERENCES Users(id),
+    FOREIGN KEY (followee_id) REFERENCES Users(id)
+) DEFAULT CHARSET=utf8;
+
+
+CREATE TABLE Subscribers (
+    user VARCHAR(50) NOT NULL,
+    thread_id INT UNSIGNED  NOT NULL,
+    UNIQUE (user, thread_id),
+    FOREIGN KEY (user) REFERENCES Users(email)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (thread_id) REFERENCES Threads(id)
+) DEFAULT CHARSET=utf8;
+
+
+
+
+
+
+session

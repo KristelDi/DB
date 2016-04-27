@@ -9,19 +9,28 @@ app.use(bodyParser.json());
 
 app.post('/db/api/clear/', function(req, res, next) {
 	result = {};
+	turn_off = 'SET foreign_key_checks = 0;';
 	qStr1 = 'TRUNCATE TABLE Users;';
 	qStr2 = 'TRUNCATE TABLE Forums;';
 	qStr3 = 'TRUNCATE TABLE Threads;';
 	qStr4 = 'TRUNCATE TABLE Posts;';
 	qStr5 = 'TRUNCATE TABLE Followers;';
-	mod_func.execute_sql(qStr1, function(data){
-		mod_func.execute_sql(qStr2, function(data){
-			mod_func.execute_sql(qStr3, function(data){
-				mod_func.execute_sql(qStr4, function(data){
-					mod_func.execute_sql(qStr5, function(data){
-						result.response = 'OK';
-						result.code = 0;
-						res.status(200).json(result);
+	qStr6 = 'TRUNCATE TABLE Subscribers;';
+	turn_on = 'SET foreign_key_checks = 1;';
+	mod_func.execute_sql(turn_off, function(data){
+		mod_func.execute_sql(qStr1, function(data){
+			mod_func.execute_sql(qStr2, function(data){
+				mod_func.execute_sql(qStr3, function(data){
+					mod_func.execute_sql(qStr4, function(data){
+						mod_func.execute_sql(qStr5, function(data){
+							mod_func.execute_sql(qStr6, function(data){
+								mod_func.execute_sql(turn_on, function(data){
+									result.response = 'OK';
+									result.code = 0;
+									res.status(200).json(result);
+								})
+							})
+						})
 					})
 				})
 			})
