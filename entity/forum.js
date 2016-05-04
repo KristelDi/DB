@@ -25,7 +25,7 @@ router.post('/create/', function(req, res, next) {
 router.get('/details/', function(req, res, next) {
 	var result = {};
 	result.response = req.query;
-	console.log(req.query);
+	//console.log(req.query);
 	connect.query("SELECT * FROM Forums WHERE short_name=?;", 
 		[req.query.forum], 
 		function(err, data) {
@@ -35,23 +35,23 @@ router.get('/details/', function(req, res, next) {
 				result = err;
 				res.status(400).json(result);
 			} else {
-				console.log(data);
+				//console.log(data);
 				result.response = data[0];
-				console.log('result');
-				console.log(result);
+				//console.log('result');
+				//console.log(result);
 				mod_func.get_user(data[0].user, function(user_data, httpreq){
-					console.log('user data');
-					console.log(user_data);
+					//console.log('user data');
+					//console.log(user_data);
 					if (req.query.related !== undefined){
 						result.response.user = user_data;						
 						result.code = 0;
-						console.log('yes response');
-						console.log(result.response);
+						//console.log('yes response');
+						//console.log(result.response);
 						res.status(200).json(result);
 					} else {
 						result.code = 0;
-						console.log('no response');
-						console.log(result.response);
+						//console.log('no response');
+						//console.log(result.response);
 						res.status(200).json(result);
 					}
 				});	
@@ -143,7 +143,7 @@ router.get('/listThreads/', function(req, res, next) {
 router.get('/listUsers/', function(req, res, next) {
 	var result = {};
 	result.response = {};
-	connect.query("SELECT * FROM Users u JOIN Forums f ON u.id = f.user_id WHERE f.short_name=?;", 
+	connect.query("SELECT * FROM Users u JOIN Forums f ON u.email = f.user WHERE f.short_name=?;", 
 		[req.query.forum], 
 		function(err, data) {
 			if (err) {

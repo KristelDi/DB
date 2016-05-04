@@ -1,6 +1,7 @@
 var express = require('express');
 var app = express();
 var connect = require('./dbconnect');
+var moment = require('moment');
 
 function TwoDigits(s){
   if(s<10){s = '0'+s;}else{s = ''+s;} return(s)
@@ -25,7 +26,7 @@ exports.execute_sql = function (sql_string, callback) {
 exports.get_user = function (email, callback) {
 	var data = {};
 	var result = {};
-	console.log('tet user email = ' + email);
+	//console.log('tet user email = ' + email);
 	connect.query("SELECT * FROM Users WHERE email=?;", 
 		[email], 
 		function(err, data) {
@@ -35,8 +36,8 @@ exports.get_user = function (email, callback) {
 				result = err;
 				callback(result, 400);
 			} else {
-					console.log('data');
-					console.log(data);
+					//console.log('data');
+					//console.log(data);
 					if (Object.keys(data).length === 0) {
 						result.code = 1;
 						result.message = 'User is not found';
@@ -53,8 +54,8 @@ exports.get_user = function (email, callback) {
 exports.get_user_full = function (email, callback) {
 	var data = {};
 	var result = {};
-	console.log('tet user email = ' + email);
-	connect.query("SELECT *, fol1.follower_id as followers, fol2.followee_id as following, sub.thread_id as subscriptions FROM Users u LEFT JOIN Followers fol1 ON u.id=fol1.follower_id LEFT JOIN Followers fol2 ON u.id=fol2.followee_id LEFT JOIN Subscribers sub ON u.id=sub.user WHERE u.email=?;", 
+	//console.log('tet user email = ' + email);
+	connect.query("SELECT * FROM Users WHERE email=?;", 
 		[email], 
 		function(err, data) {
 			if (err) {
@@ -63,25 +64,83 @@ exports.get_user_full = function (email, callback) {
 				result = err;
 				callback(result, 400);
 			} else {
-					console.log('data');
-					console.log(data);
 					if (Object.keys(data).length === 0) {
 						result.code = 1;
 						result.message = 'User is not found';
 						callback(result, 400);
 					} else {
 						result = data[0];
-						if (result.followers === null)
-							result.followers = [];
-						if (result.following === null)
-							result.following = [];
-						if (result.subscriptions === null)
-							result.subscriptions = [];
-						callback(result, 200);
+						get_subscribers(email, function(subscribers, httpreq) {	
+							get_followers(email, function(followers, httpreq) {	
+								get_followees(email, function(followees, httpreq) {	
+									result.followers = followers;
+									result.following = followees;
+									result.subscriptions = subscribers;
+									callback(result, 200);
+								})
+							})
+						})
 					}
 			}
 		});			
 }
+
+function get_subscribers(user, callback) {
+	var data = {};
+	var result = {};
+	connect.query("SELECT thread FROM Subscribers WHERE user=?;", 
+		[user], 
+		function(err, data) {
+			if (err) {
+				err = mysqlErr(err.errno);
+				result = err;
+				callback(result, 400);
+			} else {
+				
+				result = data;
+
+				callback(result, 200);
+			}
+		})
+}
+
+
+
+function get_followers(user, callback) {
+	var data = {};
+	var result = {};
+	connect.query("SELECT follower FROM Followers WHERE followee=?;", 
+		[user], 
+		function(err, data) {
+			if (err) {
+				err = mysqlErr(err.errno);
+				result = err;
+				callback(result, 400);
+			} else {
+				result = data;
+				callback(result, 200);
+			}
+		})
+}
+
+
+function get_followees(user, callback) {
+	var data = {};
+	var result = {};
+	connect.query("SELECT followee FROM Followers WHERE follower=?;", 
+		[user], 
+		function(err, data) {
+			if (err) {
+				err = mysqlErr(err.errno);
+				result = err;
+				callback(result, 400);
+			} else {
+				result = data;
+				callback(result, 200);
+			}
+		})
+}
+
 
 exports.get_user_by_id = function (id, callback) {
 	var data = {};
@@ -90,13 +149,13 @@ exports.get_user_by_id = function (id, callback) {
 		[id], 
 		function(err, data) {
 			if (err) {
-				console.log(err);
+				//console.log(err);
 				err = mysqlErr(err.errno);
 				result = err;
 				callback(result, 400);
 			} else {
-					console.log('data');
-					console.log(data);
+					//console.log('data');
+					//console.log(data);
 					if (Object.keys(data).length === 0) {
 						result.code = 1;
 						result.message = 'User is not found';
@@ -120,11 +179,11 @@ exports.get_user_by_ids = function (arr_id, callback) {
 				result = err;
 				callback(result, 400);
 			} else {
-					console.log('data');
-					console.log(data);
+					//console.log('data');
+					//console.log(data);
 					if (Object.keys(data).length === 0) {
 						result.code = 1;
-						result.message = 'User is not found';
+						result.response = 'User is not found';
 						callback(result, 400);
 					} else {
 						result = data;
@@ -157,11 +216,12 @@ function GetDate(date){
 exports.get_thread = function (id, callback) {
 	var data = {};
 	var result = {};
-	console.log('request = SELECT * FROM Threads WHERE id=' + id);
+	//console.log('request = SELECT * FROM Threads WHERE id=' + id);
 	connect.query("SELECT * FROM Threads WHERE id=?;", 
 		[id], 
 		function(err, data) {
 			if (err) {
+				console.log(err);
 				err = mysqlErr(err.errno);
 				result = err;
 				callback(result, 400);
@@ -170,17 +230,81 @@ exports.get_thread = function (id, callback) {
 					console.log(data);
 					if (Object.keys(data).length === 0) {
 						result.code = 1;
-						result.message = 'Thread is not found';
+						result.response = 'Thread is not found';
 						callback(result, 400);
 					} else {
-						data[0].date = GetDate(data[0].date);
+						var newdate = moment(data[0].date);
+						data[0].date = newdate.format('YYYY-MM-DD HH:mm:ss');
+						data[0].points = data[0].likes-data[0].dislikes;
 						result = data[0];
 						callback(result, 200);
+						// get_count_posts(id, function(posts, httpreq) {	
+						// 	// console.log("hhttpreq = "+httpreq);
+						// 	// console.log("posts = "+posts);
+						// 	if (httpreq === 400) {
+						// 		res.status(httpreq).json(thread_data);
+						// 	} else {
+						// 		result.posts = posts;
+						// 		callback(result, 200);
+						// 	}
+						// })
 					}
 			}
 		});
 }
 
+exports.increment_count_posts = function (thread_id, callback) {
+	var result = {};
+	connect.query("UPDATE Threads SET posts = posts + 1 WHERE id=?;", 
+		[thread_id], 
+		function(err, data) {
+			if (err) {
+				console.log(err);
+				err = mysqlErr(err.errno);
+				result = err;
+				callback(result, 400);
+			} else {
+				result.code = 0;
+				callback(result, 200);
+			}
+		});
+}
+exports.decrement_count_posts = function (thread_id, callback) {
+	var result = {};
+	connect.query("UPDATE Threads SET posts = posts - 1 WHERE id=?;", 
+		[thread_id], 
+		function(err, data) {
+			if (err) {
+				console.log(err);
+				err = mysqlErr(err.errno);
+				result = err;
+				callback(result, 400);
+			} else {
+				result.code = 0;
+				callback(result, 200);
+			}
+		});
+}
+
+
+function get_count_posts (thread_id, callback) {
+	var data = {};
+	var result = {};
+	connect.query("SELECT COUNT(*) as posts FROM Posts WHERE thread=? AND isDeleted=false;", 
+		[thread_id], 
+		function(err, data) {
+			if (err) {
+				err = mysqlErr(err.errno);
+				result = err;
+				callback(result, 400);
+			} else {
+				//console.log(data);
+				result = data[0].posts;
+				//console.log("res = " + result);
+				callback(result, 200);
+			}
+		});
+}
 
 
 exports.get_forum = function (short_name, callback) {
@@ -198,7 +322,7 @@ exports.get_forum = function (short_name, callback) {
 					console.log(data);
 					if (Object.keys(data).length === 0) {
 						result.code = 1;
-						result.message = 'Forum is not found';
+						result.response = 'Forum is not found';
 						callback(result, 400);
 					} else {
 						result = data[0];
@@ -211,21 +335,26 @@ exports.get_forum = function (short_name, callback) {
 exports.get_post = function (id, callback) {
 	var data = {};
 	var result = {};
-	connect.query("SELECT * FROM Posts WHERE id=?;", 
+	connect.query("SELECT *, likes-dislikes as points FROM Posts WHERE id=?;", 
 		[id], 
 		function(err, data) {
+			//console.log("try to err" + err);
 			if (err) {
 				err = mysqlErr(err.errno);
 				result = err;
 				callback(result, 400);
 			} else {
-					console.log('data');
-					console.log(data);
-					if (Object.keys(data).length === 0) {
+					if (Object.keys(data).length === 0 || data[0] === undefined) {
+						//console.log("error post not found")
 						result.code = 1;
-						result.message = 'Post is not found';
+						result.response = 'Post is not found';
 						callback(result, 400);
 					} else {
+						console.log("DATE 1 " + data[0].date);
+						if (data[0].date === undefined)
+							console.log("WTFWTFWTFWTFWTF!!!!!!!!!!WTFWTFW") 
+						var newdate = moment(data[0].date);
+						data[0].date = newdate.format('YYYY-MM-DD HH:mm:ss');
 						result = data[0];
 						callback(result, 200);
 					}
@@ -269,19 +398,19 @@ exports.mysqlErr = function (errCode) {
 	switch(errCode) {
 		case 1062: 
 			errAns.code = 5;
-			errAns.message = "duplicateRecord";
+			errAns.response = "duplicateRecord";
 			break;
 		case 1064:
 			errAns.code = 3;
-			errAns.message = "semantic";
+			errAns.response = "semantic";
 			break;
 		case 1327:
 			errAns.code = 3;
-			errAns.message = "semantic";
+			errAns.response = "semantic";
 			break;
 		default:
 			errAns.code = 4;
-			errAns.message = "unknown";
+			errAns.response = "unknown";
 			break;
 	}
 	return errAns;
@@ -303,8 +432,29 @@ exports.mysqlErr = function (errCode) {
 // 	});		
 // }
 
+exports.include = function(arr, obj) {
+	if(arr === undefined)
+		return false;
+	if (arr.length > 3) 
+		arr = [arr];
+    for(var i=0; i<arr.length; i++) {
+        if (arr[i] == obj) {
+        	return true;
+        }
+    }
+}
 
-
+exports.format_dates = function (data) {
+    for(var i=0; i<data.length; i++) {
+    	console.log("was date: " + data[i].date);
+		if (data[i].date === undefined)
+			console.log("WTFWTFWTFWTFWTF!!!!!!!!!!WTFWTFW") 
+   		var newdate = moment(data[i].date);
+		data[i].date = newdate.format('YYYY-MM-DD HH:mm:ss');
+    	console.log("now date: " + data[i].date);
+	}
+	return data;
+}
 
 exports.user_details = function(email){
 	result = {};

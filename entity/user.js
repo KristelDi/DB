@@ -2,12 +2,12 @@ var express = require('express');
 var router = express.Router();
 var connect = require('./../dbconnect');
 var mod_func = require('./../func');
-
+var moment = require('moment');
 
 router.post('/create/', function(req, res) {
  	var result = {};
-	console.log("req/body create user");
-	console.log(req.body);
+//	console.log("req/body create user");
+	//console.log(req.body);
 	result.response = req.body;
 	if (req.body.isAnonymous === undefined) {
 		req.body.isAnonymous = false;
@@ -17,8 +17,9 @@ router.post('/create/', function(req, res) {
 		function(err, data) {
 			if (err) {
 				err = mod_func.mysqlErr(err.errno);
-				result = err;
-				res.status(400).json(result);
+				result.response = err;
+				result.code = 5;
+				res.status(200).json(result);
 			} else {
 				mod_func.get_user(req.body.email, function (data_user, httpreq) {
 					result.response = data_user;
@@ -34,7 +35,7 @@ router.get('/details/', function(req, res, next) {
 	result.response = {};
 	mod_func.get_user_full(req.query.user, function(user_data, httpreq) {
 		if (httpreq === 400) {
-			res.status(httpreq).json(user_data);
+			res.status(200).json(user_data);
 		} else {
 			result.response = user_data;
 			result.code = 0;
@@ -63,17 +64,17 @@ router.post('/follow/',function(req, res, next) {
 	result.response = {};
 	var followee = 0;
 	var follower = 1;
-	console.log(req.body);
+	//console.log(req.body);
 	connect.query("SELECT * FROM Users WHERE email=? OR email=?;", 
 		[req.body.follower, req.body.followee], 
 		function(err, data) {
 			if (err) {
-				console.log(err);
+				//console.log(err);
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
 				res.status(400).json(result);
 			} else {
-				console.log(data);
+				//console.log(data);
 				if (data[1].email === req.body.follower) {
 					followee = 1;
 					follower = 0;
@@ -101,7 +102,7 @@ router.get('/listFollowers/',function(req, res, next) {
 	result.response = {};
 	mod_func.get_user(req.query.user, function(user_data, httpreq) {
 		if (httpreq === 400) {
-			res.status(httpreq).json(user_data);
+			res.status(200).json(user_data);
 		} else {
 			connect.query("SELECT id FROM Users u JOIN Followers f ON  u.id = f.follower_id WHERE f.followee_id=?;", 
 				[user_data.id], 
@@ -111,8 +112,8 @@ router.get('/listFollowers/',function(req, res, next) {
 						result = err;
 						res.status(400).json(result);
 					} else {
-						console.log('DATA ');
-						console.log(data);
+						//console.log('DATA ');
+						//console.log(data);
 						if (Object.keys(data).length === 0) {
 							result.code = 0;
 							res.status(200).json(result);
@@ -138,7 +139,7 @@ router.get('/listFollowing/',function(req, res, next) {
 	result.response = {};
 	mod_func.get_user(req.query.user, function(user_data, httpreq) {
 		if (httpreq === 400) {
-			res.status(httpreq).json(user_data);
+			res.status(200).json(user_data);
 		} else {
 			connect.query("SELECT id FROM Users u JOIN Followers f ON  u.id = f.followee_id WHERE f.follower_id=?;", 
 				[user_data.id], 
@@ -148,8 +149,8 @@ router.get('/listFollowing/',function(req, res, next) {
 						result = err;
 						res.status(400).json(result);
 					} else {
-						console.log('DATA ');
-						console.log(data);
+						//console.log('DATA ');
+						//console.log(data);
 						if (Object.keys(data).length === 0) {
 							result.code = 0;
 							res.status(200).json(result);
@@ -172,25 +173,42 @@ router.get('/listFollowing/',function(req, res, next) {
 router.get('/listPosts/',function(req, res, next) {
 	var result = {};
 	result.response = {};
-	mod_func.get_user(req.query.user, function(user_data, httpreq) {
-		if (httpreq === 400) {
-			res.status(httpreq).json(user_data);
-		} else {
-			connect.query("SELECT * FROM Posts WHERE user_id=?;", 
-				[user_data.id], 
-				function(err, data) {
-					if (err) {
-						err = mod_func.mysqlErr(err.errno);
-						result = err;
-						res.status(400).json(result);
-					} else {
-							result.response = data;
-							result.code = 0;
-							res.status(200).json(result);
-					}
-				});	
+	var str_since = "";
+	var str_sort = "";
+	var str_order = "";
+	var str_limit = ";";
+	
+	if (req.query.since) {
+		var newdate = moment(req.query.since);
+		req.query.since = newdate.format('YYYY-MM-DD HH:mm:ss');
+		str_since = " AND date > '" + req.query.since+"'";	
+	}
+	if (req.query.limit)
+		str_limit = " LIMIT " + req.query.limit + ";";
+	if (req.query.sort === "flat" || !req.query.sort)
+		str_sort = " ORDER BY date";
+	if(req.query.sort === "tree")
+		str_sort = " ORDER BY parent, date ";
+	if(req.query.sort === "parent_tree")
+		str_sort = " ORDER BY parent, date ";
+	if (req.query.order)
+		str_order = " "+ req.query.order;
+
+	console.log("SELECT * FROM Posts WHERE user=?" + str_since + str_sort + str_order + str_limit + ";");
+
+	connect.query("SELECT  p.date, p.dislikes, p.forum, p.dislikes, p.forum, p.id, p.isApproved, p.isApproved, p.isDeleted, p.isEdited, p.isHighlighted, p.isSpam, p.likes, p.message, p.thread, p.user, p.parent, p.likes-p.dislikes as points FROM Posts p WHERE p.user=?" + str_since + str_sort + str_order + str_limit + ";", 
+		[req.query.user], 
+		function(err, data) {
+			if (err) {
+				err = mod_func.mysqlErr(err.errno);
+				result = err;
+				res.status(400).json(result);
+			} else {
+					result.response = mod_func.format_dates(data);
+					result.code = 0;
+					res.status(200).json(result);
 			}
-	});
+		});	
 })
 
 router.post('/unfollow/',function(req, res, next) {
@@ -198,7 +216,7 @@ router.post('/unfollow/',function(req, res, next) {
 	result.response = {};
 	var followee = 0;
 	var follower = 1;
-	console.log(req.body);
+	//console.log(req.body);
 	connect.query("SELECT * FROM Users WHERE email IN (?, ?);", 
 		[req.body.follower, req.body.followee], 
 		function(err, data) {
@@ -208,7 +226,7 @@ router.post('/unfollow/',function(req, res, next) {
 				result = err;
 				res.status(400).json(result);
 			} else {
-				console.log(data);
+				//console.log(data);
 				if (data[1].email === req.body.follower) {
 					followee = 1;
 					follower = 0;
