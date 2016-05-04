@@ -131,24 +131,26 @@ router.get('/listPosts/',function(req, res, next) {
 		str_order = " "+ req.query.order;
 	if(req.query.sort === "tree") {
 		str_sort = " ORDER BY path ASC ";
-		if (req.query.order === "DESC") {
+		if (req.query.order === "desc") {
 			str_sort = ' ORDER BY LPAD(path, 2, "") DESC, path ASC';
 		}		
 		str_order = "";
 	}
 	if(req.query.sort === "parent_tree") {
-		if (req.query.order === "ASC" || !req.query.order) {
+		if (req.query.order === "asc" || !req.query.order) {
 			var tmp = String( req.query.limit);
 			while (tmp.length < 2) tmp = '0' + tmp;
 			str_sort = ' AND (path < "' + tmp + '") ';
-			str_sort += ' ORDER BY path ASC';str_sort = " ORDER BY path ";
+			str_sort += ' ORDER BY path ASC';
+			str_limit='';
 		}
 
-		if (req.query.order === "DESC" || !req.query.order) {
+		if (req.query.order === "desc" || !req.query.order) {
 			var tmp = String( req.query.limit);
 			while (tmp.length < 2) tmp = '0' + tmp;
 			str_sort = ' AND (path < "' + tmp + '") ';
 			str_sort += ' order by LPAD(path, 2, "") DESC, path ASC';
+			str_limit='';
 		}
 		str_order = "";
 	}
@@ -160,7 +162,7 @@ router.get('/listPosts/',function(req, res, next) {
 			res.status(httpreq).json(thread_data);
 		} else {
 			console.log(thread_data);
-			connect.query("SELECT p.date, p.dislikes, p.forum, p.dislikes, p.forum, p.id, p.isApproved, p.isApproved, p.isDeleted, p.isEdited, p.isHighlighted, p.isSpam, p.likes, p.message, p.thread, p.user, p.parent, p.likes-p.dislikes as points FROM Posts p WHERE p.thread=?" + str_since + str_sort + str_order + str_limit + ";", 
+			connect.query("SELECT p.date, p.dislikes, p.forum, p.dislikes, p.forum, p.id, p.isApproved, p.isDeleted, p.isEdited, p.isHighlighted, p.isSpam, p.likes, p.message, p.thread, p.user, p.parent, p.likes-p.dislikes as points FROM Posts p WHERE p.thread=?" + str_since + str_sort + str_order + str_limit + ";", 
 				[req.query.thread], 	
 				function(err, data) {
 					if (err) {

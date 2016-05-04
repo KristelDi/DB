@@ -78,7 +78,7 @@ router.get('/listPosts/', function(req, res, next) {
 
 	console.log("SELECT * FROM Posts p WHERE p.forum=?" + str_since + str_order + str_limit + ";");
 
-	connect.query("SELECT p.date, p.dislikes, p.forum, p.dislikes, p.forum, p.id, p.isApproved, p.isApproved, p.isDeleted, p.isEdited, p.isHighlighted, p.isSpam, p.likes, p.message, p.thread, p.user, p.parent, p.likes-p.dislikes as points FROM Posts p WHERE p.forum=?" + str_since + str_order + str_limit + ";",  
+	connect.query("SELECT p.date, p.dislikes, p.forum, p.dislikes, p.forum, p.id, p.isApproved, p.isDeleted, p.isEdited, p.isHighlighted, p.isSpam, p.likes, p.message, p.thread, p.user, p.parent, p.likes-p.dislikes as points FROM Posts p WHERE p.forum=?" + str_since + str_order + str_limit + ";",  
 		[req.query.forum], 
 		function(err, data) {
 			if (err) {
@@ -119,7 +119,7 @@ router.get('/listThreads/', function(req, res, next) {
 		str_order = " ORDER BY t.date "+ req.query.order;
 
 
-	connect.query("SELECT * FROM Threads t WHERE t.forum=?" + str_since + str_order + str_limit + ";", 
+	connect.query("SELECT *, likes-dislikes as points FROM Threads t WHERE t.forum=?" + str_since + str_order + str_limit + ";", 
 		[req.query.forum], 
 		function(err, data) {
 			if (err) {
@@ -132,8 +132,7 @@ router.get('/listThreads/', function(req, res, next) {
 				//console.log(data);
 				console.log("related = " + req.query.related);
 				
-				mod_func.get_full_info(data, req.query.related, function(data_all, httpreq) {				
-		
+				mod_func.get_full_info(data, req.query.related, function(data_all, httpreq) {			
 					result.response = data_all;
 					result.code = 0;
 					res.status(200).json(result);
@@ -151,16 +150,16 @@ router.get('/listUsers/', function(req, res, next) {
 	var str_limit = ";";
 	console.log(req.query);
 	if (req.query.since) {
-		str_since = " AND u.id > '" + req.query.since+"'";	
+		str_since = " AND u.id > '" + req.query.since_id+"'";	
 	}
 	if (req.query.limit)
 		str_limit = " LIMIT " + req.query.limit + ";";
 	if (req.query.order)
 		str_order = " ORDER BY u.name "+ req.query.order;
 
-console.log("SELECT * FROM Users u JOIN Forums f ON u.email = f.user WHERE f.short_name=?"+ str_since + str_order + str_limit + ";");
-
-	connect.query("SELECT * FROM Users u JOIN Forums f ON u.email = f.user WHERE f.short_name=?"+ str_since + str_order + str_limit + ";",  
+console.log("SELECT * FROM Users u JOIN Posts p ON u.email = p.user WHERE p.forum=?"+ str_since  +" GROUP BY id " + str_order + str_limit + ";");
+	
+	connect.query("SELECT *, u.id as main_id FROM Users u JOIN Posts p ON u.email = p.user WHERE p.forum=?"+ str_since  +" GROUP BY u.id " + str_order + str_limit + ";",  
 		[req.query.forum], 
 		function(err, data) {
 			if (err) {
@@ -168,22 +167,20 @@ console.log("SELECT * FROM Users u JOIN Forums f ON u.email = f.user WHERE f.sho
 				result = err;
 				res.status(400).json(result);
 			} else {
-				data = mod_func.format_dates(data);
-				result.response = data;
-				//console.log(data);
-				console.log("related = " + req.query.related);
-				if (req.query.related) {
-					mod_func.get_full_info(data, req.query.related, function(data_all, httpreq) {				
-						result.response = data_all;
-						result.code = 0;
-						res.status(200).json(result);
-					});
-				} else {
-					console.log("result = ", result);
+				var arr_ids =  data.map(function(test) {
+					return test.main_id;
+				})
+				console.log("arr_ids = ", arr_ids);
+				mod_func.get_user_by_id(arr_ids, function(data_users, httpreq) {
+					result.response = data_users;
 					result.code = 0;
-					res.status(200).json(result);
-				}
-			
+					res.status(httpreq).json(result);
+				});
+				// mod_func.get_full_info_only_about_users(data, req.query.related, function(data_all, httpreq) {				
+				// 	result.response = data_all;
+				// 	result.code = 0;
+				// 	res.status(200).json(result);
+				// });			
 			}
 	});		
 })

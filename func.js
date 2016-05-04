@@ -224,9 +224,8 @@ function get_user_full_id(id, callback) {
 function get_full_info_one(data, related, callback) {
 	var result = data;
 	console.log("full ONE data = ", data);
-	console.log("ONE forum = ", data.forum);
 	exports.get_forum(data.forum, function(forum_data, httpreq){
-		exports.get_user(data.user, function(user_data,httpreq){
+		exports.get_user_full(data.user, function(user_data,httpreq){
 			exports.get_thread(data.thread, function(thread_data, httpreq){
 					if (exports.include(related,'forum')) {
 						result.forum = forum_data;
@@ -270,6 +269,32 @@ exports.get_full_info = function(posts, related, callback) {
 			}
 	});	
 }
+
+// exports.get_full_info_only_about_users = function(posts, related, callback) {
+// 	var data = {};
+// 	var result = [];
+// 	var res ;
+// 	var data_all = posts;
+// 	res = posts.map(function(elem, index) {
+// 			return function (callback) {
+// 				console.log("elem = ", elem[index]);
+// 				get_full_info_one(elem, related,
+// 					function(return_data, httpreq) {
+// 						callback(null, return_data);
+// 					});
+// 			}
+// 		});
+// 		//асинхронный запрос всех юзеров
+// 		async.parallel(res,
+// 		function (err, results){
+// 			if (err) 
+// 				callback(results, 400);
+// 			else {
+// 				//responceCallback(0, results);
+// 				callback(results, 200);
+// 			}
+// 	});	
+// }
 
 exports.get_user_by_id = function (ids, callback) {
 	var data = {};

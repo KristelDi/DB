@@ -197,7 +197,7 @@ router.get('/listPosts/',function(req, res, next) {
 
 	console.log("SELECT * FROM Posts WHERE user=?" + str_since + str_sort + str_order + str_limit + ";");
 
-	connect.query("SELECT  p.date, p.dislikes, p.forum, p.dislikes, p.forum, p.id, p.isApproved, p.isApproved, p.isDeleted, p.isEdited, p.isHighlighted, p.isSpam, p.likes, p.message, p.thread, p.user, p.parent, p.likes-p.dislikes as points FROM Posts p WHERE p.user=?" + str_since + str_sort + str_order + str_limit + ";", 
+	connect.query("SELECT  p.date, p.dislikes, p.forum, p.dislikes, p.forum, p.id, p.isApproved, p.isDeleted, p.isEdited, p.isHighlighted, p.isSpam, p.likes, p.message, p.thread, p.user, p.parent, p.likes-p.dislikes as points FROM Posts p WHERE p.user=?" + str_since + str_sort + str_order + str_limit + ";", 
 		[req.query.user], 
 		function(err, data) {
 			if (err) {
