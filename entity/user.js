@@ -62,36 +62,26 @@ router.get('/details/', function(req, res, next) {
 router.post('/follow/',function(req, res, next) {
 	var result = {};
 	result.response = {};
-	var followee = 0;
-	var follower = 1;
 	//console.log(req.body);
-	connect.query("SELECT * FROM Users WHERE email=? OR email=?;", 
+	connect.query("INSERT INTO Followers (follower, followee) VALUES (?, ?);", 
 		[req.body.follower, req.body.followee], 
 		function(err, data) {
 			if (err) {
 				//console.log(err);
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
-				res.status(400).json(result);
+				res.status(200).json(result);
 			} else {
-				//console.log(data);
-				if (data[1].email === req.body.follower) {
-					followee = 1;
-					follower = 0;
-				};
-				connect.query("INSERT INTO Followers (follower_id, followee_id) VALUES (?, ?);", 
-					[data[followee].id, data[follower].id], 
-					function(err, data2) {
-						if (err) {
-							err = mod_func.mysqlErr(err.errno);
-							result = err;
-							res.status(400).json(result);
-						} else {
-							result.response = data[follower];
-							result.code = 0;
-							res.status(200).json(result);
-						}
-					});
+				mod_func.get_user_full(req.body.follower, function(user_data, httpreq) {
+					if (httpreq === 400) {
+						res.status(200).json(user_data);
+					} else {
+						result.response = user_data;
+						result.code = 0;
+						res.status(200).json(result);
+					}
+				});
+
 			}
 		});	
 });
@@ -100,37 +90,43 @@ router.post('/follow/',function(req, res, next) {
 router.get('/listFollowers/',function(req, res, next) { 
 	var result = {};
 	result.response = {};
-	mod_func.get_user(req.query.user, function(user_data, httpreq) {
-		if (httpreq === 400) {
-			res.status(200).json(user_data);
-		} else {
-			connect.query("SELECT id FROM Users u JOIN Followers f ON  u.id = f.follower_id WHERE f.followee_id=?;", 
-				[user_data.id], 
-				function(err, data) {
-					if (err) {
-						err = mod_func.mysqlErr(err.errno);
-						result = err;
-						res.status(400).json(result);
-					} else {
-						//console.log('DATA ');
-						//console.log(data);
-						if (Object.keys(data).length === 0) {
-							result.code = 0;
-							res.status(200).json(result);
-						} else {
-							arr_ids =  data.map(function(test) {
-								return test.id;
-							})
-							mod_func.get_user_by_ids(arr_ids, function(data_users, httpreq) {
-								result.response = data_users;
-								result.code = 0;
-								res.status(httpreq).json(result);
-							});
-						}
-					}
-				});	
-		}
-	});
+	var str_since = "";
+	var str_order = "";
+	var str_limit = ";";
+	
+	if (req.query.since) {
+		str_since = " AND since_id > " + req.query.since_id;	
+	}
+	if (req.query.limit)
+		str_limit = " LIMIT " + req.query.limit + ";";
+	if (req.query.order)
+		str_order = " ORDER BY name "+ req.query.order;
+	console.log("SELECT id FROM Users u JOIN Followers f ON  u.email = f.follower WHERE f.followee=?" + str_since + str_order + str_limit + ";");
+	connect.query("SELECT id FROM Users u JOIN Followers f ON  u.email = f.follower WHERE f.followee=?" + str_since + str_order + str_limit + ";", 
+		[req.query.user], 
+		function(err, data) {
+			if (err) {
+				err = mod_func.mysqlErr(err.errno);
+				result = err;
+				res.status(400).json(result);
+			} else {
+				if (Object.keys(data).length === 0) {
+					result.code = 0;
+					res.status(200).json(result);
+				} else {
+					arr_ids =  data.map(function(test) {
+						return test.id;
+					})
+					console.log("get_user by id" + arr_ids);
+					mod_func.get_user_by_id(arr_ids, function(data_users, httpreq) {
+						result.response = data_users;
+						result.code = 0;
+						res.status(httpreq).json(result);
+					});
+				}
+			}
+		});	
+	
 })
 
 
@@ -141,8 +137,8 @@ router.get('/listFollowing/',function(req, res, next) {
 		if (httpreq === 400) {
 			res.status(200).json(user_data);
 		} else {
-			connect.query("SELECT id FROM Users u JOIN Followers f ON  u.id = f.followee_id WHERE f.follower_id=?;", 
-				[user_data.id], 
+			connect.query("SELECT id FROM Users u JOIN Followers f ON u.email = f.followee WHERE f.follower=?;", 
+				[req.query.user], 
 				function(err, data) {
 					if (err) {
 						err = mod_func.mysqlErr(err.errno);
@@ -158,11 +154,16 @@ router.get('/listFollowing/',function(req, res, next) {
 							arr_ids =  data.map(function(test) {
 								return test.id;
 							})
-							mod_func.get_user_by_ids(arr_ids, function(data_users, httpreq) {
+							mod_func.get_user_by_id(arr_ids, function(data_users, httpreq) {
 								result.response = data_users;
 								result.code = 0;
 								res.status(httpreq).json(result);
 							});
+							// mod_func.get_user_by_ids(arr_ids, function(data_users, httpreq) {
+							// 	result.response = data_users;
+							// 	result.code = 0;
+							// 	res.status(httpreq).json(result);
+							// });
 						}
 					}
 				});	
@@ -214,40 +215,22 @@ router.get('/listPosts/',function(req, res, next) {
 router.post('/unfollow/',function(req, res, next) {
 	var result = {};
 	result.response = {};
-	var followee = 0;
-	var follower = 1;
 	//console.log(req.body);
-	connect.query("SELECT * FROM Users WHERE email IN (?, ?);", 
+	connect.query("DELETE FROM Followers WHERE follower=? AND followee=?;", 
 		[req.body.follower, req.body.followee], 
 		function(err, data) {
 			if (err) {
-				console.log(err);
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
 				res.status(400).json(result);
 			} else {
-				//console.log(data);
-				if (data[1].email === req.body.follower) {
-					followee = 1;
-					follower = 0;
-				};
-				connect.query("DELETE FROM Followers WHERE follower_id=? AND followee_id=?;", 
-					[data[followee].id, data[follower].id], 
-					function(err, data2) {
-						if (err) {
-							err = mod_func.mysqlErr(err.errno);
-							result = err;
-							res.status(400).json(result);
-						} else {
-							mod_func.get_user(req.body.follower, function(data_users, httpreq) {
-								result.response = data_users;
-								result.code = 0;
-								res.status(httpreq).json(result);
-							});							
-						}
-					});
+				mod_func.get_user_full(req.body.follower, function(data_users, httpreq) {
+					result.response = data_users;
+					result.code = 0;
+					res.status(httpreq).json(result);
+				});							
 			}
-		});	
+		});
 })
 
 router.post('/updateProfile/',function(req, res, next) {

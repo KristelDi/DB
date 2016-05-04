@@ -2,7 +2,7 @@ var express = require('express');
 var router = express.Router();
 var connect = require('./../dbconnect');
 var mod_func = require('./../func');
-
+var moment = require('moment');
 
 router.post('/create/', function(req, res, next) {
  	var result = {};
@@ -62,62 +62,41 @@ router.get('/details/', function(req, res, next) {
 router.get('/listPosts/', function(req, res, next) {
 	var result = {};
 	result.response = {};
-	// if (include(req.query.related,'forum')) {
-	// 	sqlForum = ", f.id, f.shor"
-	// } else {
-	// }
+	var str_since = "";
+	var str_order = "";
+	var str_limit = ";";
+	console.log(req.query);
+	if (req.query.since) {
+		var newdate = moment(req.query.since);
+		req.query.since = newdate.format('YYYY-MM-DD HH:mm:ss');
+		str_since = " AND p.date > '" + req.query.since+"'";	
+	}
+	if (req.query.limit)
+		str_limit = " LIMIT " + req.query.limit + ";";
+	if (req.query.order)
+		str_order = " ORDER BY p.date "+ req.query.order;
 
-	connect.query("SELECT * FROM Posts p JOIN Forums f ON p.forum=f.short_name JOIN Users u ON p.user=u.email JOIN Threads t ON p.thread_id=t.id  WHERE f.short_name=?;", 
+	console.log("SELECT * FROM Posts p WHERE p.forum=?" + str_since + str_order + str_limit + ";");
+
+	connect.query("SELECT p.date, p.dislikes, p.forum, p.dislikes, p.forum, p.id, p.isApproved, p.isApproved, p.isDeleted, p.isEdited, p.isHighlighted, p.isSpam, p.likes, p.message, p.thread, p.user, p.parent, p.likes-p.dislikes as points FROM Posts p WHERE p.forum=?" + str_since + str_order + str_limit + ";",  
 		[req.query.forum], 
 		function(err, data) {
 			if (err) {
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
-				res.status(400).json(result);
-			} else {
-				result.response = data;
-				result.code = 0;
 				res.status(200).json(result);
-
-				// mod_func.get_forum(data.forum_id, function(forum_data, httpreq){
-				// 	mod_func.get_user(data.user_id, function(user_data,httpreq){
-				// 		mod_func.get_thread(data.thread, function(thread_data, httpreq){
-							
-				// 			console.log(forum_data);
-
-				// 			result.response.forum = {};
-				// 			if (include(req.query.related,'forum')) {
-				// 				result.response.forum = forum_data;
-				// 				result.response.forum.test = 'yes';
-				// 			} else {
-				// 				result.response.forum = forum_data.short_name;
-				// 			}
-
-				// 			result.response.user = {};
-				// 			if (include(req.query.related,'user')) {
-				// 				result.response.user = user_data;
-				// 				result.response.user.test = 'yes';
-				// 			} else {
-				// 				result.response.user = user_data.email;
-				// 			}
-
-				// 			result.response.thread = {};
-				// 			if (include(req.query.related,'thread')) {
-				// 				result.response.thread = thread_data;
-				// 				result.response.thread.test = 'yes';
-				// 			} else {
-				// 				result.response.thread = thread_data.id;
-				// 			}
-
-				// 			result.code = 0;
-				// 			res.status(200).json(result);
-				// 		})
-				// 	})
-				// })
-
-
-
-
+			} else {
+				data = mod_func.format_dates(data);
+				result.response = data;
+				//console.log(data);
+				console.log("related = " + req.query.related);
+				
+				mod_func.get_full_info(data, req.query.related, function(data_all, httpreq) {					
+		
+					result.response = data_all;
+					result.code = 0;
+					res.status(200).json(result);
+				});
 			}
 	});		
 })
@@ -125,17 +104,41 @@ router.get('/listPosts/', function(req, res, next) {
 router.get('/listThreads/', function(req, res, next) {
 	var result = {};
 	result.response = {};
-	connect.query("SELECT * FROM Threads t JOIN Forums f ON t.forum_id = f.id WHERE f.short_name=?;", 
+	var str_since = "";
+	var str_order = "";
+	var str_limit = ";";
+	console.log(req.query);
+	if (req.query.since) {
+		var newdate = moment(req.query.since);
+		req.query.since = newdate.format('YYYY-MM-DD HH:mm:ss');
+		str_since = " AND t.date > '" + req.query.since+"'";	
+	}
+	if (req.query.limit)
+		str_limit = " LIMIT " + req.query.limit + ";";
+	if (req.query.order)
+		str_order = " ORDER BY t.date "+ req.query.order;
+
+
+	connect.query("SELECT * FROM Threads t WHERE t.forum=?" + str_since + str_order + str_limit + ";", 
 		[req.query.forum], 
 		function(err, data) {
 			if (err) {
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
-				res.status(400).json(result);
-			} else {
-				result.response = data;
-				result.code = 0;
 				res.status(200).json(result);
+			} else {
+				data = mod_func.format_dates(data);
+				result.response = data;
+				//console.log(data);
+				console.log("related = " + req.query.related);
+				
+				mod_func.get_full_info(data, req.query.related, function(data_all, httpreq) {				
+		
+					result.response = data_all;
+					result.code = 0;
+					res.status(200).json(result);
+				});
+			
 			}
 	});		
 })
@@ -143,7 +146,21 @@ router.get('/listThreads/', function(req, res, next) {
 router.get('/listUsers/', function(req, res, next) {
 	var result = {};
 	result.response = {};
-	connect.query("SELECT * FROM Users u JOIN Forums f ON u.email = f.user WHERE f.short_name=?;", 
+	var str_since = "";
+	var str_order = "";
+	var str_limit = ";";
+	console.log(req.query);
+	if (req.query.since) {
+		str_since = " AND u.id > '" + req.query.since+"'";	
+	}
+	if (req.query.limit)
+		str_limit = " LIMIT " + req.query.limit + ";";
+	if (req.query.order)
+		str_order = " ORDER BY u.name "+ req.query.order;
+
+console.log("SELECT * FROM Users u JOIN Forums f ON u.email = f.user WHERE f.short_name=?"+ str_since + str_order + str_limit + ";");
+
+	connect.query("SELECT * FROM Users u JOIN Forums f ON u.email = f.user WHERE f.short_name=?"+ str_since + str_order + str_limit + ";",  
 		[req.query.forum], 
 		function(err, data) {
 			if (err) {
@@ -151,9 +168,22 @@ router.get('/listUsers/', function(req, res, next) {
 				result = err;
 				res.status(400).json(result);
 			} else {
+				data = mod_func.format_dates(data);
 				result.response = data;
-				result.code = 0;
-				res.status(200).json(result);
+				//console.log(data);
+				console.log("related = " + req.query.related);
+				if (req.query.related) {
+					mod_func.get_full_info(data, req.query.related, function(data_all, httpreq) {				
+						result.response = data_all;
+						result.code = 0;
+						res.status(200).json(result);
+					});
+				} else {
+					console.log("result = ", result);
+					result.code = 0;
+					res.status(200).json(result);
+				}
+			
 			}
 	});		
 })

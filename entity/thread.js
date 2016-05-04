@@ -127,13 +127,33 @@ router.get('/listPosts/',function(req, res, next) {
 		str_limit = " LIMIT " + req.query.limit + ";";
 	if (req.query.sort === "flat" || !req.query.sort)
 		str_sort = " ORDER BY date";
-	if(req.query.sort === "tree")
-		str_sort = " ORDER BY parent, date ";
-	if(req.query.sort === "parent_tree")
-		str_sort = " ORDER BY parent, date ";
 	if (req.query.order)
 		str_order = " "+ req.query.order;
-	// console.log("SELECT * FROM Posts p JOIN Threads t ON p.thread=t.id WHERE t.id=?" + str_since + str_sort + str_order + str_limit + ";");
+	if(req.query.sort === "tree") {
+		str_sort = " ORDER BY path ASC ";
+		if (req.query.order === "DESC") {
+			str_sort = ' ORDER BY LPAD(path, 2, "") DESC, path ASC';
+		}		
+		str_order = "";
+	}
+	if(req.query.sort === "parent_tree") {
+		if (req.query.order === "ASC" || !req.query.order) {
+			var tmp = String( req.query.limit);
+			while (tmp.length < 2) tmp = '0' + tmp;
+			str_sort = ' AND (path < "' + tmp + '") ';
+			str_sort += ' ORDER BY path ASC';str_sort = " ORDER BY path ";
+		}
+
+		if (req.query.order === "DESC" || !req.query.order) {
+			var tmp = String( req.query.limit);
+			while (tmp.length < 2) tmp = '0' + tmp;
+			str_sort = ' AND (path < "' + tmp + '") ';
+			str_sort += ' order by LPAD(path, 2, "") DESC, path ASC';
+		}
+		str_order = "";
+	}
+
+	 console.log("SELECT * FROM Posts p JOIN Threads t ON p.thread=t.id WHERE t.id=?" + str_since + str_sort + str_order + str_limit + ";");
 
 	mod_func.get_thread(req.query.thread, function(thread_data, httpreq) {	
 		if (httpreq === 400) {

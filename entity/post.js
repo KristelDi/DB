@@ -25,23 +25,28 @@ router.post('/create/',function(req, res, next) {
 		req.body.isDeleted = false;
 	}	
 	result.response = req.body;
-	connect.query("INSERT INTO Posts (date, thread, message, user, forum, parent, isApproved, isHighlighted, isEdited, isSpam, isDeleted) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", 
-		[req.body.date, req.body.thread, req.body.message, req.body.user, req.body.forum, req.body.parent, req.body.isApproved, req.body.isHighlighted, req.body.isEdited, req.body.isSpam, req.body.isDeleted], 
-		function(err, data) {
-			if (err) {
-				console.log(err);
-				err = mod_func.mysqlErr(err.errno);
-				result = err;
-				res.status(400).json(result);
-			} else {
-				result.response.id = data.insertId;
-				mod_func.increment_count_posts(req.body.thread, function(err, data) {
-					result.code = 0;
-					res.status(200).json(result);						
-				});
-			}
-		});	
-	
+	var mathpath = '';
+
+	console.log("HI");
+	mod_func.get_math_path(req.body, function(mathpath, httpreq){
+		console.log("mathpath" + mathpath);
+		connect.query("INSERT INTO Posts (date, thread, message, user, forum, parent, isApproved, isHighlighted, isEdited, isSpam, isDeleted, path) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", 
+			[req.body.date, req.body.thread, req.body.message, req.body.user, req.body.forum, req.body.parent, req.body.isApproved, req.body.isHighlighted, req.body.isEdited, req.body.isSpam, req.body.isDeleted, mathpath], 
+			function(err, data) {
+				if (err) {
+					console.log(err);
+					err = mod_func.mysqlErr(err.errno);
+					result = err;
+					res.status(400).json(result);
+				} else {
+					result.response.id = data.insertId;
+					mod_func.increment_count_posts(req.body.thread, function(err, data) {
+						result.code = 0;
+						res.status(200).json(result);						
+					});
+				}
+			});	
+	});
 })
 
 

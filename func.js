@@ -2,6 +2,8 @@ var express = require('express');
 var app = express();
 var connect = require('./dbconnect');
 var moment = require('moment');
+var async = require('async');
+
 
 function TwoDigits(s){
   if(s<10){s = '0'+s;}else{s = ''+s;} return(s)
@@ -84,7 +86,6 @@ exports.get_user_full = function (email, callback) {
 			}
 		});			
 }
-
 function get_subscribers(user, callback) {
 	var data = {};
 	var result = {};
@@ -96,15 +97,49 @@ function get_subscribers(user, callback) {
 				result = err;
 				callback(result, 400);
 			} else {
-				
-				result = data;
-
+				var arr = [];
+				for (var i in data){
+					arr.push(data[i].thread);
+				}
+				result = arr;
 				callback(result, 200);
 			}
 		})
 }
 
 
+exports.get_forum = function (short_name, callback) {
+	var data = {};
+	var result = {};
+	connect.query("SELECT * FROM Forums WHERE short_name=?;", 
+		[short_name], 
+		function(err, data) {
+			if (err) {
+				err = mysqlErr(err.errno);
+				result = err;
+				callback(result, 400);
+			} else {
+					console.log('data');
+					console.log(data);
+					if (Object.keys(data).length === 0) {
+						result.code = 1;
+						result.response = 'Forum is not found';
+						callback(result, 400);
+					} else {
+						result = data[0];
+						callback(result, 200);
+					}
+			}
+		});
+}
+
+function to_array(data) {
+	var arr = [];
+	for (var i in data){
+		arr.push(data[i]);
+	}
+	return arr;
+}
 
 function get_followers(user, callback) {
 	var data = {};
@@ -116,8 +151,12 @@ function get_followers(user, callback) {
 				err = mysqlErr(err.errno);
 				result = err;
 				callback(result, 400);
-			} else {
-				result = data;
+			} else {	
+				var arr = [];
+				for (var i in data){
+					arr.push(data[i].follower);
+				}
+				result = arr;
 				callback(result, 200);
 			}
 		})
@@ -135,38 +174,183 @@ function get_followees(user, callback) {
 				result = err;
 				callback(result, 400);
 			} else {
-				result = data;
+				var arr = [];
+				for (var i in data){
+					arr.push(data[i].followee);
+				}
+				result = arr;
 				callback(result, 200);
 			}
 		})
 }
 
 
-exports.get_user_by_id = function (id, callback) {
+function get_user_full_id(id, callback) {
 	var data = {};
 	var result = {};
+	var httpreq;
+	//console.log('tet user email = ' + email);
 	connect.query("SELECT * FROM Users WHERE id=?;", 
 		[id], 
 		function(err, data) {
 			if (err) {
-				//console.log(err);
+				console.log(err);
 				err = mysqlErr(err.errno);
 				result = err;
 				callback(result, 400);
 			} else {
-					//console.log('data');
-					//console.log(data);
 					if (Object.keys(data).length === 0) {
 						result.code = 1;
 						result.message = 'User is not found';
 						callback(result, 400);
 					} else {
+						var email = data[0].email;
 						result = data[0];
-						callback(result, 200);
+						get_subscribers(email, function(subscribers, httpreq) {	
+							get_followers(email, function(followers, httpreq) {	
+								get_followees(email, function(followees, httpreq) {	
+									result.followers = followers;
+									result.following = followees;
+									result.subscriptions = subscribers;
+									callback(result, 200);
+								})
+							})
+						})
 					}
 			}
 		});			
 }
+
+function get_full_info_one(data, related, callback) {
+	var result = data;
+	console.log("full ONE data = ", data);
+	console.log("ONE forum = ", data.forum);
+	exports.get_forum(data.forum, function(forum_data, httpreq){
+		exports.get_user(data.user, function(user_data,httpreq){
+			exports.get_thread(data.thread, function(thread_data, httpreq){
+					if (exports.include(related,'forum')) {
+						result.forum = forum_data;
+					} 
+					if (exports.include(related,'user')) {
+						result.user = user_data;
+					}
+					if (exports.include(related,'thread')) {
+						result.thread = thread_data;
+					}
+					console.log("result.forum = ", result.forum);
+
+					callback(result,200);
+			})
+		})
+	})	
+}
+
+exports.get_full_info = function(posts, related, callback) {
+	var data = {};
+	var result = [];
+	var res ;
+	var data_all = posts;
+	res = posts.map(function(elem, index) {
+			return function (callback) {
+				console.log("elem = ", elem[index]);
+				get_full_info_one(elem, related,
+					function(return_data, httpreq) {
+						callback(null, return_data);
+					});
+			}
+		});
+		//асинхронный запрос всех юзеров
+		async.parallel(res,
+		function (err, results){
+			if (err) 
+				callback(results, 400);
+			else {
+				//responceCallback(0, results);
+				callback(results, 200);
+			}
+	});	
+}
+
+exports.get_user_by_id = function (ids, callback) {
+	var data = {};
+	var result = [];
+	console.log("ids = " + ids);
+	var res ;
+	res = ids.map( function(elem) {
+			return function (callback) {
+				get_user_full_id(elem,
+					function(user_data, httpreq) {
+						console.log("user_data");
+						console.log(user_data);
+						callback(null, user_data);
+					});
+			}
+		});
+		//асинхронный запрос всех юзеров
+		async.parallel(res,
+		function (err, results){
+			if (err) 
+				callback(results, 400);
+			else {
+				//responceCallback(0, results);
+				callback(results, 200);
+			}
+		});	
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	// for (var i in ids) {
+	// 	var id = ids[id];
+	// 	console.log("id = " + ids[i]);
+	// 	get_user_full_id(id, function(user_data, httpreq) {
+	// 			if (httpreq === 400) {
+	// 				callback(user_data, 400);
+	// 			} else {
+	// 				console.log(user_data);
+	// 				if (i === ids.length-1) {
+	// 					callback(result, 200)
+	// 				} else {
+	// 					result.push(user_data);
+						
+	// 				}
+	// 			}
+	// 		});
+	// 	}
+	// }
+	// connect.query("SELECT * FROM Users WHERE id=?;", 
+	// 	[id], 
+	// 	function(err, data) {
+	// 		if (err) {
+	// 			//console.log(err);
+	// 			err = mysqlErr(err.errno);
+	// 			result = err;
+	// 			callback(result, 400);
+	// 		} else {
+	// 				//console.log('data');
+	// 				//console.log(data);
+	// 				if (Object.keys(data).length === 0) {
+	// 					result.code = 1;
+	// 					result.message = 'User is not found';
+	// 					callback(result, 400);
+	// 				} else {
+	// 					result = data[0];
+	// 					callback(result, 200);
+	// 				}
+	// 		}
+	// 	});			
 
 exports.get_user_by_ids = function (arr_id, callback) {
 	var data = {};
@@ -216,7 +400,7 @@ function GetDate(date){
 exports.get_thread = function (id, callback) {
 	var data = {};
 	var result = {};
-	//console.log('request = SELECT * FROM Threads WHERE id=' + id);
+	console.log('request = SELECT * FROM Threads WHERE id=' + id);
 	connect.query("SELECT * FROM Threads WHERE id=?;", 
 		[id], 
 		function(err, data) {
@@ -239,7 +423,7 @@ exports.get_thread = function (id, callback) {
 						result = data[0];
 						callback(result, 200);
 						// get_count_posts(id, function(posts, httpreq) {	
-						// 	// console.log("hhttpreq = "+httpreq);
+						// 	// console.log("httpreq = "+httpreq);
 						// 	// console.log("posts = "+posts);
 						// 	if (httpreq === 400) {
 						// 		res.status(httpreq).json(thread_data);
@@ -307,30 +491,6 @@ function get_count_posts (thread_id, callback) {
 }
 
 
-exports.get_forum = function (short_name, callback) {
-	var data = {};
-	var result = {};
-	connect.query("SELECT * FROM Forums WHERE short_name=?;", 
-		[short_name], 
-		function(err, data) {
-			if (err) {
-				err = mysqlErr(err.errno);
-				result = err;
-				callback(result, 400);
-			} else {
-					console.log('data');
-					console.log(data);
-					if (Object.keys(data).length === 0) {
-						result.code = 1;
-						result.response = 'Forum is not found';
-						callback(result, 400);
-					} else {
-						result = data[0];
-						callback(result, 200);
-					}
-			}
-		});
-}
 
 exports.get_post = function (id, callback) {
 	var data = {};
@@ -437,8 +597,10 @@ exports.include = function(arr, obj) {
 		return false;
 	if (arr.length > 3) 
 		arr = [arr];
+	console.log("arr = ", arr);
     for(var i=0; i<arr.length; i++) {
         if (arr[i] == obj) {
+        	console.log("arr[i] ", arr[i], " obj ", obj);
         	return true;
         }
     }
@@ -474,6 +636,62 @@ exports.user_details = function(email){
 	// 		return result;
 	// 	}
 	// });	
+}
+
+exports.get_math_path = function (input_data, callback) {
+	console.log("GET MATH PATH");
+//	async.parallel(		
+		//получаем MaterPath родителя
+		connect.query("SELECT path FROM Posts WHERE id = ? AND thread = ?;", 
+			[input_data.parent, input_data.thread],
+			function(err, data) {
+				if (err) {
+					console.log("ERROR");
+					console.log(err);
+					err = mysqlErr(err.errno);
+					result = err;
+					callback(result, 400);
+				} else {
+					console.log(data);
+					var parentPath;
+					if (data.length === 0) {
+						parentPath = '';
+					} else {
+						parentPath = data[0].path;
+					}
+					//максимальный номер ребенка по маске из родителя
+					connect.query('SELECT MAX(path) AS max FROM Posts WHERE (path LIKE ?) AND (thread = ?) ORDER BY path', 
+						[parentPath + '__', input_data.thread], 
+						function(err, data) {
+							if (err) {
+								err = mysqlErr(err.errno);
+								result = err;
+								callback(result, 400);
+							} else {
+								//формирование следующего нового MaterPath
+								var newMaterPath;
+								if (data[0].max === null) {
+									//предков этого parenta нет, поэтому создаем новый уровень вложенности
+									newMaterPath = parentPath + '00';
+									console.log("mat path = " + newMaterPath);
+								} else {
+									//2 последних символа строки на один уровень вложенности
+									var tmp = data[0].max.slice(-2);
+									tmp = (parseInt(tmp, 36) + 1).toString(36);
+									while (tmp.length < 2) tmp = '0' + tmp;
+									//больше чем 2 последних символа строки
+									if (tmp.length > 2) 
+										callback(error.notMemory, null);
+									else {
+										newMaterPath = parentPath + tmp;
+									}
+								}
+								callback(newMaterPath, 200);	
+							}
+						});
+				}
+			})
+//		)
 }
 
 
