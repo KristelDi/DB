@@ -37,7 +37,7 @@ router.post('/create/',function(req, res, next) {
 					console.log(err);
 					err = mod_func.mysqlErr(err.errno);
 					result = err;
-					res.status(400).json(result);
+					res.status(200).json(result);
 				} else {
 					result.response.id = data.insertId;
 					mod_func.increment_count_posts(req.body.thread, function(err, data) {
@@ -86,7 +86,7 @@ router.get('/list/',function(req, res, next) {
 	var str_limit = ";";
 	var str_order = "";
 	if (req.query.since)
-		str_since = " AND p.date > '" + req.query.since + "'";	
+		str_since = " AND p.date >= '" + req.query.since + "'";	
 	if (req.query.limit)
 		str_limit = " LIMIT " + req.query.limit;
 	if (req.query.order)
@@ -133,7 +133,7 @@ router.post('/remove/',function(req, res, next) {
 	result.response = {};
 	mod_func.get_post(req.body.post, function(post_data, httpreq) {	
 		if (httpreq === 400) {
-			res.status(httpreq).json(post_data);
+			res.status(200).json(post_data);
 		} else {
 			console.log(post_data);
 			console.log("post data is Del" + post_data.isDeleted);
@@ -171,7 +171,7 @@ router.post('/restore/',function(req, res, next) {
 	result.response = {};
 	mod_func.get_post(req.body.post, function(post_data, httpreq) {	
 		if (httpreq === 400) {
-			res.status(httpreq).json(post_data);
+			res.status(200).json(post_data);
 		} else {
 			if (post_data.isDeleted === 1) {
 				connect.query("UPDATE Posts SET isDeleted=0 WHERE id=?;", 
@@ -209,11 +209,11 @@ router.post('/update/',function(req, res, next) {
 			if (err) {
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
-				res.status(400).json(result);
+				res.status(200).json(result);
 			} else {
 				mod_func.get_post(req.body.post, function(post_data, httpreq) {	
 					if (httpreq === 400) {
-						res.status(httpreq).json(post_data);
+						res.status(200).json(post_data);
 					} else {
 						result.response = post_data;
 						result.code = 0;
@@ -234,11 +234,11 @@ router.post('/vote/',function(req, res, next) {
 				console.log(err);
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
-				res.status(400).json(result);
+				res.status(200).json(result);
 			} else {
 				mod_func.get_post(req.body.post, function(post_data, httpreq) {	
 					if (httpreq === 400) {
-						res.status(httpreq).json(post_data);
+						res.status(200).json(post_data);
 					} else {
 						result.response = post_data;
 						result.code = 0;

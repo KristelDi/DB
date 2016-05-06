@@ -13,7 +13,7 @@ router.post('/create/', function(req, res, next) {
 					if (err) {
 						err = mod_func.mysqlErr(err.errno);
 						result = err;
-						res.status(400).json(result);
+						res.status(200).json(result);
 					} else {
 						result.response.id = data.insertId;
 						result.code = 0;
@@ -33,7 +33,7 @@ router.get('/details/', function(req, res, next) {
 				console.log(err);
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
-				res.status(400).json(result);
+				res.status(200).json(result);
 			} else {
 				//console.log(data);
 				result.response = data[0];
@@ -69,7 +69,7 @@ router.get('/listPosts/', function(req, res, next) {
 	if (req.query.since) {
 		var newdate = moment(req.query.since);
 		req.query.since = newdate.format('YYYY-MM-DD HH:mm:ss');
-		str_since = " AND p.date > '" + req.query.since+"'";	
+		str_since = " AND p.date >= '" + req.query.since+"'";	
 	}
 	if (req.query.limit)
 		str_limit = " LIMIT " + req.query.limit + ";";
@@ -111,7 +111,7 @@ router.get('/listThreads/', function(req, res, next) {
 	if (req.query.since) {
 		var newdate = moment(req.query.since);
 		req.query.since = newdate.format('YYYY-MM-DD HH:mm:ss');
-		str_since = " AND t.date > '" + req.query.since+"'";	
+		str_since = " AND t.date >= '" + req.query.since+"'";	
 	}
 	if (req.query.limit)
 		str_limit = " LIMIT " + req.query.limit + ";";
@@ -150,7 +150,7 @@ router.get('/listUsers/', function(req, res, next) {
 	var str_limit = ";";
 	console.log(req.query);
 	if (req.query.since) {
-		str_since = " AND u.id > '" + req.query.since_id+"'";	
+		str_since = " AND u.id >= '" + req.query.since_id+"'";	
 	}
 	if (req.query.limit)
 		str_limit = " LIMIT " + req.query.limit + ";";
@@ -165,7 +165,7 @@ console.log("SELECT * FROM Users u JOIN Posts p ON u.email = p.user WHERE p.foru
 			if (err) {
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
-				res.status(400).json(result);
+				res.status(200).json(result);
 			} else {
 				var arr_ids =  data.map(function(test) {
 					return test.main_id;

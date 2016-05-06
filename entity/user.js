@@ -95,7 +95,7 @@ router.get('/listFollowers/',function(req, res, next) {
 	var str_limit = ";";
 	
 	if (req.query.since) {
-		str_since = " AND since_id > " + req.query.since_id;	
+		str_since = " AND since_id >= " + req.query.since_id;	
 	}
 	if (req.query.limit)
 		str_limit = " LIMIT " + req.query.limit + ";";
@@ -108,7 +108,7 @@ router.get('/listFollowers/',function(req, res, next) {
 			if (err) {
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
-				res.status(400).json(result);
+				res.status(200).json(result);
 			} else {
 				if (Object.keys(data).length === 0) {
 					result.code = 0;
@@ -143,7 +143,7 @@ router.get('/listFollowing/',function(req, res, next) {
 					if (err) {
 						err = mod_func.mysqlErr(err.errno);
 						result = err;
-						res.status(400).json(result);
+						res.status(200).json(result);
 					} else {
 						//console.log('DATA ');
 						//console.log(data);
@@ -182,7 +182,7 @@ router.get('/listPosts/',function(req, res, next) {
 	if (req.query.since) {
 		var newdate = moment(req.query.since);
 		req.query.since = newdate.format('YYYY-MM-DD HH:mm:ss');
-		str_since = " AND date > '" + req.query.since+"'";	
+		str_since = " AND date >= '" + req.query.since+"'";	
 	}
 	if (req.query.limit)
 		str_limit = " LIMIT " + req.query.limit + ";";
@@ -203,7 +203,7 @@ router.get('/listPosts/',function(req, res, next) {
 			if (err) {
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
-				res.status(400).json(result);
+				res.status(200).json(result);
 			} else {
 					result.response = mod_func.format_dates(data);
 					result.code = 0;
@@ -222,7 +222,7 @@ router.post('/unfollow/',function(req, res, next) {
 			if (err) {
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
-				res.status(400).json(result);
+				res.status(200).json(result);
 			} else {
 				mod_func.get_user_full(req.body.follower, function(data_users, httpreq) {
 					result.response = data_users;
@@ -242,7 +242,7 @@ router.post('/updateProfile/',function(req, res, next) {
 			if (err) {
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
-				res.status(400).json(result);
+				res.status(200).json(result);
 			} else {
 				mod_func.get_user(req.body.user, function (user_data, httpreq) {
 					result.response = user_data;

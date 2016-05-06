@@ -68,8 +68,9 @@ app.use('/db/api/post', require('./entity/post'))
 
 
 
-
 var port = 3062;
 app.listen(port, function () {
   console.log('Example app listening on port '+port+'!');
 });
+
+

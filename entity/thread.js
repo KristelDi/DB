@@ -18,7 +18,7 @@ router.post('/create/',function(req, res, next) {
 			console.log(err);
 			err = mod_func.mysqlErr(err.errno);
 			result = err;
-			res.status(400).json(result);
+			res.status(200).json(result);
 		} else {
 			result.response.id = data.insertId;
 			result.code = 0;
@@ -32,7 +32,7 @@ router.get('/details/',function(req, res, next) {
 	var result = {};
 	mod_func.get_thread(req.query.thread, function(thread_data, httpreq) {	
 		if (httpreq === 400) {
-			res.status(httpreq).json(thread_data);
+			res.status(200).json(thread_data);
 		} else {
 			result.response = thread_data;
 			if (thread_data.isDeleted === 1)
@@ -69,7 +69,7 @@ router.get('/list/',function(req, res, next) {
 	if (req.query.since) {
 		var newdate = moment(req.query.since);
 		req.query.since = newdate.format('YYYY-MM-DD HH:mm:ss');
-		str_since = " AND date > '" + req.query.since + "'";	
+		str_since = " AND date >= '" + req.query.since + "'";	
 	}
 	if (req.query.limit)
 		str_limit = " LIMIT " + req.query.limit;
@@ -83,7 +83,7 @@ router.get('/list/',function(req, res, next) {
 				if (err) {
 					err = mod_func.mysqlErr(err.errno);
 					result = err;
-					res.status(400).json(result);
+					res.status(200).json(result);
 				} else {
 						result.response = mod_func.format_dates(data);
 						result.code = 0;
@@ -98,7 +98,7 @@ router.get('/list/',function(req, res, next) {
 					if (err) {
 						err = mod_func.mysqlErr(err.errno);
 						result = err;
-						res.status(400).json(result);
+						res.status(200).json(result);
 					} else {
 							//console.log(data);
 							result.response = mod_func.format_dates(data);
@@ -121,7 +121,7 @@ router.get('/listPosts/',function(req, res, next) {
 	if (req.query.since) {
 		var newdate = moment(req.query.since);
 		req.query.since = newdate.format('YYYY-MM-DD HH:mm:ss');
-		str_since = " AND date > '" + req.query.since+"'";	
+		str_since = " AND date >= '" + req.query.since+"'";	
 	}
 	if (req.query.limit)
 		str_limit = " LIMIT " + req.query.limit + ";";
@@ -159,7 +159,7 @@ router.get('/listPosts/',function(req, res, next) {
 
 	mod_func.get_thread(req.query.thread, function(thread_data, httpreq) {	
 		if (httpreq === 400) {
-			res.status(httpreq).json(thread_data);
+			res.status(200).json(thread_data);
 		} else {
 			console.log(thread_data);
 			connect.query("SELECT p.date, p.dislikes, p.forum, p.dislikes, p.forum, p.id, p.isApproved, p.isDeleted, p.isEdited, p.isHighlighted, p.isSpam, p.likes, p.message, p.thread, p.user, p.parent, p.likes-p.dislikes as points FROM Posts p WHERE p.thread=?" + str_since + str_sort + str_order + str_limit + ";", 
@@ -169,7 +169,7 @@ router.get('/listPosts/',function(req, res, next) {
 						console.log(err);
 						err = mod_func.mysqlErr(err.errno);
 						result = err;
-						res.status(400).json(result);
+						res.status(200).json(result);
 					} else {
 							console.log(data);
 							result.response = mod_func.format_dates(data);
@@ -196,7 +196,7 @@ router.post('/open/',function(req, res, next) {
 			if (err) {
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
-				res.status(400).json(result);
+				res.status(200).json(result);
 			} else {
 					result.response.thread = req.body.thread;
 					result.code = 0;
@@ -214,7 +214,7 @@ router.post('/close/',function(req, res, next) {
 			if (err) {
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
-				res.status(400).json(result);
+				res.status(200).json(result);
 			} else {
 					result.response.thread = req.body.thread;
 					result.code = 0;
@@ -232,7 +232,7 @@ router.post('/remove/',function(req, res, next) {
 			if (err) {
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
-				res.status(400).json(result);
+				res.status(200).json(result);
 			} else {
 				result.response = data;
 				result.code = 0;
@@ -250,7 +250,7 @@ router.post('/restore/',function(req, res, next) {
 			if (err) {
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
-				res.status(400).json(result);
+				res.status(200).json(result);
 			} else {
 				result.response = data;
 				result.code = 0;
@@ -308,11 +308,11 @@ router.post('/update/',function(req, res, next) {
 			if (err) {
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
-				res.status(400).json(result);
+				res.status(200).json(result);
 			} else {
 				mod_func.get_thread(req.body.thread, function(thread_data, httpreq) {	
 					if (httpreq === 400) {
-						res.status(httpreq).json(thread_data);
+						res.status(200).json(thread_data);
 					} else {
 						result.response = thread_data;
 						result.code = 0;
@@ -335,11 +335,11 @@ router.post('/vote/',function(req, res, next) {
 				console.log(err);
 				err = mod_func.mysqlErr(err.errno);
 				result = err;
-				res.status(400).json(result);
+				res.status(200).json(result);
 			} else {
 				mod_func.get_thread(req.body.thread, function(thread_data, httpreq) {	
 					if (httpreq === 400) {
-						res.status(httpreq).json(thread_data);
+						res.status(200).json(thread_data);
 					} else {
 						result.response = thread_data;
 						result.code = 0;
