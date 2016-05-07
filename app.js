@@ -61,6 +61,7 @@ app.get('/db/api/status/', function(req, res, next) {
 	})
 })
 
+
 app.use('/db/api/user', require('./entity/user'))
 app.use('/db/api/forum', require('./entity/forum'))
 app.use('/db/api/thread', require('./entity/thread'))
@@ -68,9 +69,8 @@ app.use('/db/api/post', require('./entity/post'))
 
 
 
-var port = 3062;
+var port = 8080;
 app.listen(port, function () {
   console.log('Example app listening on port '+port+'!');
 });
-
 

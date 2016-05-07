@@ -149,7 +149,7 @@ router.get('/listUsers/', function(req, res, next) {
 	var str_order = "";
 	var str_limit = ";";
 	console.log(req.query);
-	if (req.query.since) {
+	if (req.query.since_id) {
 		str_since = " AND u.id >= '" + req.query.since_id+"'";	
 	}
 	if (req.query.limit)
