@@ -335,8 +335,6 @@ exports.get_user_by_id = function (ids, callback) {
 
 
 
-
-
 	// for (var i in ids) {
 	// 	var id = ids[id];
 	// 	console.log("id = " + ids[i]);
@@ -550,31 +548,31 @@ exports.get_post = function (id, callback) {
 var errors = {
 	requireFields: {
 		code: 2,
-		message: "Не хватает параметров в запросе"
+		message: "Not enough params"
 	},
 	unknown: {
 		code: 4,
-		message: "Неизвестная ошибка"
+		message: "Don't know"
 	},
 	duplicateRecord: {
 		code: 5,
-		message: "Дублирующася запись в таблицу"
+		message: "DublicateRecord"
 	},
 	norecord: {
 		code: 1,
-		message: "Такой записи в таблице нет"
+		message: "Not found"
 	},
 	semantic: {
 		code: 3,
-		message: "Семантическая ошибка запроса"
+		message: "Semantic error"
 	},
 	notWrite: {
 		code: 1,
-		message: "Ошибка записи, почему-то не записалось(("
+		message: "Don't know"
 	},
 	notMemory: {
 		code: 4,
-		message: "Алфавита не хватает для записи постов в этот уровень"
+		message: "Not enough memory"
 	}
 };
 
